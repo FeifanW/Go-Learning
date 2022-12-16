@@ -3,5 +3,8 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Print("hello,world!")
+	// 定义变量
+	var i int
+	i = 10
+	fmt.Print(i)
 }
