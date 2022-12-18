@@ -498,13 +498,155 @@ T：就是数据类型，比如int32，int64，float32等等
 
 v：就是需要转换的变量
 
+```go
+var i int32 = 100
+// 希望将 i => float
+var n1 float32 = float32(i)
+var n2 int8 = int8(i)
+var n3 int64 = int64(i) // 低精度 -> 高精度
+fmt.Printf("i=%v n1=%v n2=%v n3=%v", i, n1, n2, n3)
+fmt.Printf("i type is %T\n",i)    // int32
+```
 
+细节：
 
+1. Go中，数据类型的转换可以是从表示范围小 -> 表示范围大，也可以 范围的 -> 范围小
+2. 被转换的是**变量存储的数据**（即值），原来那个变量本身的数据类型并没有变化！
+3. 在转换中，比如将int64转成int8，编译时不会报错，只是转换的结果是按溢出处理，和我们希望的结果不一样
 
+如果没有使用到一个包，但是有想去掉，前面加一个_
 
+```go
+import (
+	_ "fmt"
+)
+```
 
+```go
+var n1 int32 = 12
+var n3 int8
+var n4 int8
+n4 = int8(n1) + 127  // 编译通过，但是结果不是127 + 12 按溢出处理
+n3 = int8(n1) + 128  // 编译不过
+fmt.Println(n3)
+```
 
+###### 基本数据类型转string:
 
+- 方法1：fmt.Sprintf("%参数",表达式)
+
+  1. 参数需要和表达式数据类型相匹配
+  2. fmt.Sprintf() 会返回转换后的字符串
+
+  ```go
+  var num1 int = 99
+  var num2 float64 = 23.456
+  var b bool = true
+  var myChar byte = 'h'
+  var str string // 空的str
+  
+  str = fmt.Sprintf("%d", num1)
+  fmt.Printf("str type %T str=%q\n", str, str)
+  
+  str = fmt.Sprintf("%f", num2)
+  fmt.Printf("str type %T str=%q\n", str, str)
+  
+  str = fmt.Sprintf("%t", b)
+  fmt.Printf("str type %T str=%q\n", str, str)
+  
+  str = fmt.Sprintf("%d", myChar)
+  fmt.Printf("str type %T str=%q\n", str, str)
+  // 具体关于%号加字母代表的含义，去查Go语言官网文档fmt函数
+  ```
+
+- 方法2：使用strconv包的函数
+
+  1. FormatBool
+  2. FormatInt
+  3. FormatUint
+  4. FormatFloat
+  
+  ```go
+  var num3 int = 99
+  var num4 float64 = 23.456
+  var b2 bool = true
+  var str string // 空的str
+  
+  str = strconv.FormatInt(int64(num3), 10)
+  fmt.Printf("str type %T str=%q\n", str, str)
+  
+  // strconv.FormatFloat(num4, 'f', 10, 64)
+  // 说明：'f'格式 10: 表示小数位保留10位   64:表示这个小数是float64
+  str = strconv.FormatFloat(num4, 'f', 10, 64)
+  fmt.Printf("str type %T str=%q\n", str, str)
+  
+  str = strconv.FormatBool(b2)
+  fmt.Printf("str type %T str=%q\n", str, str)
+  
+  // strconv包中有一个函数Itoa
+  var num5 int64 = 4567
+  str = strconv.Itoa(int(num5))
+  fmt.Printf("str type %T str=%q\n", str, str)
+  ```
+
+###### string类型转基本数据类型：
+
+1. 使用时strconv包的函数
+
+   - ParseBool
+   - ParseFloat
+   - ParseInt
+   - ParseUint
+
+2. 案例：
+
+   ```go
+   // 案例1：字符串转布尔值
+   var str string = "true"
+   var b bool
+   /*
+   b, _ = strconv.ParseBool(str)
+   说明
+   1.strconv.ParseBool(str) 函数会返回两个值 （value bool, err error)
+   2.因为我只想获取到 value bool, 不想获取 err 所以我使用_忽略
+   */
+   
+   b, _ = strconv.ParseBool(str)
+   fmt.Printf("b type %T b=%v\n", b, b)
+   
+   // 案例2：字符串转int
+   var str2 string = "12345690"
+   var n1 int64
+   var n2 int
+   n1, _ = strconv.ParseInt(str2, 10, 64) // 返回的是int64，想要得到int32需要再转一下
+   n2 = int(n1)
+   fmt.Printf("n1 type %T n1=%v\n", n1, n1)
+   fmt.Printf("n2 type %T n2=%v\n", n2, n2)
+   
+   // 案例3：字符串转float
+   var str3 string = "123.456"
+   var f1 float64
+   f1, _ = strconv.ParseFloat(str3, 64)
+   fmt.Printf("f1 type %T f1=%v\n", f1, f1)
+   ```
+
+注意：
+
+在将String类型转成基本数据类型时，要确保String类型能够转成有效的数据，比如我们可以把"123"转成一个整数，但是不能把"hello"转成一个整数，这样做Go会直接将其转成0
+
+```go
+var str4 string = "hello"
+var n3 int64
+n3, _ = strconv.ParseInt(str4, 10, 64)
+fmt.Printf("n3 type %T n3=%v\n", n3, n3)
+```
+
+###### 指针：
+
+1. 基本数据类型，变量存的就是值，也叫值类型
+2. 获取变量的地址，用&，比如：var num int，获取num的地址：&num
+3. 指针类型，变量存的是一个地址，这个地址指向的空间存的才是值 比如：var ptr *int = &num
+4. 获取指针类型所指向的值，使用：*，比如：var ptr \*int，使用* \*ptr获取ptr指向的值
 
 
 
