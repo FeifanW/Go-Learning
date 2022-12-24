@@ -1001,7 +1001,193 @@ if age := 20; age > 18 {
 1. 年份能被4整除，但不能被100整除
 2. 能被400整除
 
+###### switch基本使用：
 
+1. switch语句用于基于不同条件执行不同动作，每一个case分支都是唯一的，从上到下逐一测试，直到匹配为止
+2. 匹配项后面也**不需要再加break**
+
+细节：
+
+1. case后是一个表达式（即：常量值、变量、一个有返回值的函数都可以）
+
+2. case后的各个表达式的值的数据类型，必须和switch的表达式数据类型一致
+
+3. case后面可以带多个表达式，使用逗号间隔。比如case 表达式1，表达式2 ...
+
+4. case后面的表达式如果是常量值（字面量），则要求不能重复
+
+5. case后面不需要带break，匹配到case后会执行对应的代码块，然后退出switch，如果都匹配不到，执行default
+
+6. default语句不是必须的
+
+7. switch 后也可以不带表达式，类似 if-else 分支来使用
+
+   ```go
+   switch {
+       case age == 10;
+       	fmt.Println("age==10")
+       case age == 20;
+      		fmt.Println("age==20")
+       default:
+       	fmt.Println("没有匹配到")
+   }
+   // case中也可以对范围进行判断
+   var score int = 30
+   switch {
+       case score > 90:
+       	fmt.Println("成绩优秀")
+       default:
+           fmt.Println("没有匹配到")
+   }
+   ```
+
+8. switch 后也可以直接声明/定义一个变量，分号结束，不推荐
+
+   ```go
+   switch score := 90; {
+       case score > 90:
+       	fmt.Println("成绩优秀")
+       default:
+           fmt.Println("没有匹配到")
+   }
+   ```
+
+9. switch穿透 fallthrough
+
+   ```go
+   var score int = 30
+   switch {
+       case score > 90:
+       	fmt.Println("成绩优秀")
+       	fallthrough  // 默认只能穿透一层
+       case score >80:
+       	fmt.Println("成绩合格")
+       default:
+           fmt.Println("没有匹配到")
+   }
+   ```
+
+10. Type Switch :
+
+    switch语句可以被用于type-switch 来判断某个interface变量中实际指向的变量类型
+
+switch和if的比较：
+
+1. 如果判断的具体数值不多，而且符合整数、浮点数、字符、字符串这几种类型。建议使用switch语句，简洁高效
+2. 其他情况，对区间判断和结果为bool类型的判断，使用if，if的范围更广
+
+###### for循环：
+
+```go
+for i:=1; i<=10; i++ {
+    fmt.Println("你好")
+}
+```
+
+细节：
+
+1. 循环条件是返回一个布尔值的表达式
+
+2. for循环的第二种使用方式
+
+   for 循环判断条件 {
+
+   ​	// 循环执行语句
+
+   }
+
+   将变量初始化和变量迭代写到其它位置
+
+3. for循环的第三种使用方式
+
+   for {
+
+   ​	// 循环执行语句
+
+   }
+
+   上面的写法等价于for;;{}是一个无限循环，通常需要break语句使用
+
+   ```go
+   // 第二种写法
+   j:=1
+   for j <= 10{
+       fmt.Println("你好")
+       j++
+   }
+   // 第三种写法
+   k := 1
+   for {   // 这里等价for ;;
+       if k <= 10 {
+           fmt.Println("ok",k)
+       } else {
+           break  // break跳出这个for循环
+       }
+       k++
+   }
+   ```
+
+4. Go提供一种for-range的方式，可以方便的遍历字符串和数组（注：数组的遍历，我们放到讲数组的时候再讲解）,案例说明如何遍历字符串
+
+   ```go
+   // 字符串遍历方式1-传统方式
+   var str string = "hello world!北京"
+   str2 = []rune(str)   // 转换成切片
+   for i:=0; i < len(str2); i++ {
+       fmt.Printf("%c \n", str2[i])  // 使用到下标
+   }
+   // 字符串遍历方式2 for-range 按照字符遍历，有汉字也正确
+   str = "abc~ok"
+   for index,val := range str{
+       fmt.Printf("index=%d, val=%c \n",index,val)
+   }
+   ```
+
+   注意：如果字符串中含有中文，那么传统的遍历字符串方式就是错误的，会出现乱码。原因是传统的对字符串的遍历是按照字节遍历的，而一个汉字在utf8编码是对应3个字节
+
+###### 实现while和do while控制：
+
+Go里面没有while和do while语法，如果需要使用类似其他语言（比如java/c 的 while和do while）可以通过for循环来实现其使用效果
+
+1. for循环实现while效果
+
+   ```go
+   循环遍历初始化
+   for {
+       if 循环条件表达式 {
+           break  // 跳出循环
+       }
+       循环操作（语句）
+       循环变量迭代
+   }
+   ```
+
+   说明：
+
+   1. for循环是一个无限循环
+   2. break语句就是跳出for循环
+
+2. 实现do while循环
+
+   ```go
+   循环变量初始化
+   for {
+       循环操作（语句）
+       循环变量迭代
+       if 循环条件表达式 {
+           break // 跳出for循环
+       }
+   }
+   ```
+
+   说明：
+
+   1. 上面循环是先执行，再判断，因此至少执行一次
+   2. 当循环条件成立后，就会执行break跳出for循环
+
+   ###### 多重循环控制：
+
+   将一个循环放在另一个循环体内，就形成了嵌套循环，在外面的for称为外层循环，里面的for称为内层循环
 
 
 
