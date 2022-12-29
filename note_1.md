@@ -1185,9 +1185,124 @@ Go里面没有while和do while语法，如果需要使用类似其他语言（�
    1. 上面循环是先执行，再判断，因此至少执行一次
    2. 当循环条件成立后，就会执行break跳出for循环
 
-   ###### 多重循环控制：
+###### 多重循环控制：
 
-   将一个循环放在另一个循环体内，就形成了嵌套循环，在外面的for称为外层循环，里面的for称为内层循环
+将一个循环放在另一个循环体内，就形成了嵌套循环，在外面的for称为外层循环，里面的for称为内层循环
+
+###### 跳转控制语句break：
+
+生成随机数，需要给rand设置一个种子
+
+```go
+rand.Seed(time.Now().UnixNano())
+n := rand.Intn(100) + 1 // [1,100) 加1之后生成 1-100随机数
+```
+
+break用于终止某个语句块的执行，中断当前的for循环或跳出switch语句
+
+注意：
+
+break语句出现在多层嵌套语句块中时，可以通过标签指明要终止的是那一层语句块
+
+```go
+label1: {
+    label2:{
+        label3:{
+            ...
+            break label2
+            ...
+        }
+    }
+}
+```
+
+设置标签：
+
+```go
+label2:
+for i:=0;i<4;i++{
+    label1:
+    for j:=0;j<10;j++{
+        if j == 2 {
+            //break label1
+            break label2
+        }
+        fmt.Println("j=",j)
+    }
+}
+```
+
+- break默认会跳出最近的for循环
+- break后面可以指定标签，跳出标签对应的for循环
+
+###### 跳转控制语句 continue:
+
+1. continue语句用于结束本次循环，继续执行下一次循环
+2. continue语句出现在多层嵌套的循环语句体重，可以通过标签指明要跳过的是那一层循环，这个和前面的标签的使用的规则一样
+
+###### 跳转控制语句 goto：
+
+1. Go语言的goto语句可以无条件的转移到程序中的指定的行
+2. goto语句通常与条件语句配合使用，可用来实现条件转义，跳出循环体等功能
+3. 在Go程序设计中**一般不主张使用goto语句**，以免造成程序流程的混乱，使理解和调试程序都产生困难
+
+基本语法：
+
+```go
+goto label
+...
+label: statement
+```
+
+```go
+var n int = 30
+// 演示goto的使用
+fmt.Println("ok1")
+if n > 20 {
+    goto label1
+}
+fmt.Println("ok2")
+fmt.Println("ok3")
+fmt.Println("ok4")
+label1:
+fmt.Println("ok5")
+fmt.Println("ok6")
+fmt.Println("ok7")
+```
+
+###### 跳转控制语句 return：
+
+跳出所在方法或函数
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
