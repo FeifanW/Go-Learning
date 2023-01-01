@@ -1,9 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"strconv"
-	"time"
 )
 
 func fbn(n int) int {
@@ -21,10 +20,27 @@ func test03() {
 	}
 }
 
+/*
+
+ */
+func readConf(name string) (err error) {
+	if name == "config.ini" {
+		// 读取...
+		return nil
+	} else {
+		// 返回一个自定义错误
+		return errors.New("读取文件错误...")
+	}
+}
+
+func test02() {
+	err := readConf("config.ini")
+	if err != nil {
+		// 如果读取文件发送错误，就输出这个错误，并终止程序
+		panic(err)
+	}
+}
+
 func main() {
-	start := time.Now().Unix()
-	test03()
-	end := time.Now().Unix()
-	fmt.Printf("执行时间为%v\n", end-start)
 
 }

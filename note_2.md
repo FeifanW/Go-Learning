@@ -581,17 +581,89 @@ fmt.Printf("b=%v\n", b)
    fmt.Printf("unix时间戳=%v unixnano时间戳=%v",now.Unix(), now.UnixNano())
    ```
 
-   
+##### 内置函数：
 
+Go的设计者为了编程方便，提供了一些函数，这些函数可以直接使用，称之为Go的内置函数
 
+1. len：用来长度，比如string、array、slice、map、channel
 
+2. new：用来分配内存，主要来分配值类型，比如int、float32、struct...返回的是指针
 
+   ```go
+   num2 := new(int)  // *int
+   /*
+   num2的类型%T => *int
+   num2的值 = 地址 exc04204c098(这个地址是系统分配)
+   num2的地址%v = 地址 exc04206a020(这个地址是系统分配)
+   num2指向的值 = 100
+   */
+   *num2 = 100
+   fmt.Printf("num2的类型%T,num2的值=%v,num2的地址%v\n num2这个指针，指向的值=%v",num2,num2,&num2,*num2)
+   ```
 
+3. make：用来分配内存，主要用来分配引用类型，比如channel、map、slice
 
+##### Go错误处理机制：
 
+1. 默认情况下，当发生错误后（panic），程序就会退出（崩溃）
+2. 如果我们希望，当发生错误后，可以捕获到错误，并进行处理，保证程序可以继续执行，还可以在捕获到错误后，给管理员一个提示（邮件，短信...）
 
+基本说明：
 
+1. Go语言追求简洁优雅，所以Go不支持传统的try...catch...finally这种处理
+2. Go中引入的处理方式为：defer、panic、recover
+3. 在这几个异常的使用场景可以这么简单描述：Go中可以抛出一个panic的异常，然后在defer中通过**recover捕获这个异常**，然后正常处理
 
+```go
+fun test(){
+    // 使用defer + recover 来捕获和处理异常
+    defer func(){
+        err := recover()  //recover()内置函数，可以捕获到异常
+        if err != nil {  // 捕获到错误
+            fmt.Println("err=",err)
+            // 这里就可以将错误信息发送给管理员...
+        }
+        
+        /*
+        另外一种写法
+        if err := recover();  err != nil {
+        
+        }
+        */
+    }()
+}
+```
+
+错误处理的好处：
+
+进行错误处理后，程序不会轻易的挂掉，如果加入预警代码，就可以让程序更加的健壮
+
+###### 自定义错误：
+
+Go程序中，也支持自定义错误，使用errors.New 和 panic 内置函数
+
+1. errors.New("错误说明")  会返回一个error类型的值，表示一个错误
+2. panic内置函数，接收一个interface{}类型的值（也就是任何值了）作为参数，可以接收error类型的变量，**输出错误信息，并退出程序**
+
+```go
+func readConf(name string) (err error) {
+	if name == "config.ini" {
+		// 读取...
+		return nil
+	} else {
+		// 返回一个自定义错误
+		return errors.New("读取文件错误...")
+	}
+}
+
+func test02() {
+	err := readConf("config.ini")
+	if err != nil {
+		// 如果读取文件发送错误，就输出这个错误，并终止程序
+		panic(err)
+	}
+}
+```
 
 
 
