@@ -1,4 +1,4 @@
-#### 1、函数：
+##### 函数：
 
 为完成某一功能的程序指令（语句）的集合，称为函数
 
@@ -858,7 +858,188 @@ numArr05 := [...]string{1:"tom", 0:"jack", 2:"mary"}  // 类型推导也可以
 
   切片默认值都为0
 
+  ```go
+  var slice []float64 = make([]float64, 5, 10)
+  slice[1] = 10
+  slice[3] = 20
+  fmt.Println(slice)
+  fmt.Println("slice的size=", len(slice))
+  fmt.Println("slice的cap=", cap(slice))
+  ```
   
+  总结：
+  
+  1. 通过make方式创建切片可以指定切片的大小和容量
+  2. 如果没有给切片的各个元素赋值，那么就会使用默认值
+     - int, float => 0
+     - string => ""
+     - bool => false
+  3. 通过make方式创建的切片对应的数组是由make底层维护，对外不可即，只能通过slice去访问各个元素
+  
+- 方式3：定义一个切片，直接就指定具体数组，使用原理类似make的方式
+
+  ```go
+  var strSlice []string = []string{"tom", "jack", "mary"}
+  fmt.Println("strSlice=", strSlice)
+  fmt.Println("strSlice size=", len(strSlice))
+  fmt.Println("strSlice=", cap(strSlice))
+  ```
+
+###### 切片的遍历：
+
+- for循环常规方式遍历
+
+- for-range 结构遍历切片
+
+  ```go
+  //使用常规的for循环遍历切片
+  var arr [5]int = [...]int{10, 20, 30, 40, 50}
+  slice := arr[1:4]
+  for i := 0; i < len(slice); i++ {
+      fmt.Printf("slice[%v]=%v", i, slice[i])
+  }
+  fmt.Println()
+  //使用for-range方式遍历切片
+  for i, v := range slice {
+      fmt.Printf("i=%v v=%v \n", i, v)
+  }
+  ```
+
+说明：
+
+1. 切片初始化时 var slice = arr[startIndex:endIndex] 左闭右开
+
+2. 切片初始化时，仍然不能越界，范围在[0-len(arr)]之间，但是可以动态增长
+
+   - var slice = arr[0:end]  可以简写 var slice = arr[:end]
+   - var slice = arr[start len(arr)]可以简写 var slice = arr[start:]
+   - var slice = arr[0:len(arr)] 可以简写: var slice = arr[:]
+
+3. cap是一个内置函数，用于统计切片的容量，即最大可以存放多少个元素
+
+4. 切片定义完后，还不能使用，因为本身是一个空的，需要让其引用到一个数组或make一个空间供切片来使用
+
+5. 切片可以继续切片
+
+   ```go
+   slice2 := slice[1:2]   // 指向的是相同的空间
+   ```
+
+6. 用append内置函数，可以对切片进行动态增加
+
+   ```go
+   var arr [5]int = [...]int{10, 20, 30, 40, 50}
+   slice := arr[1:4]
+   //用append内置函数，可以对切片进行动态增加
+   var slice3 []int = []int{100, 200, 300}
+   // 通过append直接给slice3追加具体的元素
+   slice3 = append(slice3, 400, 500, 600)
+   fmt.Println("slice3", slice3)
+   
+   // 通过append将切片slice3追加给slice3
+   slice3 = append(slice3, slice...)
+   fmt.Println("slice3", slice3)
+   ```
+
+   切片append操作的底层原理分析：
+
+   1. 切片append操作的本质就是对数组扩容
+   2. go底层会创建一个新的数组newArr(安装扩容后大小)
+   3. 将slice原来包含的元素拷贝到新的数组newArr
+   4. slice重新引用到newArr
+   5. 注意newArr是在底层来维护的，程序员不可见
+
+7. 切片的拷贝操作
+
+   切片使用copy内置函数完成拷贝，举例说明
+
+   ```go
+   var arr [5]int = [...]int{10, 20, 30, 40, 50}
+   slice := arr[1:4]
+   ```
+
+   说明：
+
+   1. copy(para1,para2)参数的数据类型是切片
+   2. 按照上面的代码来看，slice4和slice5的数据空间是独立，相互不影响，也就是说slice[0]=999 slice5[0] 仍然是1
+   3. 拷贝不会扩容
+
+8. 切片是引用类型，所以在传递时，遵循引用传递机制
+
+###### string和slice:
+
+1. string底层是一个byte数组，因此string也可以进行切片处理
+
+   ```go
+   str := "hello world"
+   slice := str[6:]
+   fmt.Println("slice=",slice)
+   ```
+
+2. string和切片在内存的形式，以"abcd"画出内存示意图
+
+3. string是不可变的，也就是说不能通过str[0] = 'z' 方式来修改字符串
+
+4. 如果需要修改字符串，可以先将string -> []byte / 或者 []rune -> 修改 -> 重写转成string
+
+   ```go
+   str := "hello world"
+   arr1 := []byte(str)
+   arr1[0] = 'z'
+   str = string(arr1)
+   fmt.Println("str=", str)
+   // 细节,转成[]byte后，可以处理英文和数字，但是不能处理中文
+   // 原因是 []byte 字节来处理，而一个汉字是3个字节，因此就会出现乱码
+   // 解决方法 是将 string 转成 []rune 即可， 因为 []rune 是按照字符处理，兼容汉字
+   arr2 := []rune(str)
+   arr2[0] = '北'
+   str = string(arr2)
+   fmt.Println("str=", str)
+   ```
+
+##### 排序和查找：
+
+1. 内部排序
+
+   将需要处理的所有数据都加载到内部存储器中进行排序
+
+   包括（交换式排序法、选择式排序法和插入式排序法）
+
+2. 外部排序
+
+   数据量过大，无法全部加载到内存中，需要借助外部存储进行排序，包括（合并排序法和直接合并排序法）
+
+- 交换式排序法
+
+  - 冒泡排序
+
+    
+
+  - 快速排序
+
+
+
+
+
+​		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
