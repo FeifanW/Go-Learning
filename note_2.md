@@ -1013,15 +1013,101 @@ numArr05 := [...]string{1:"tom", 0:"jack", 2:"mary"}  // 类型推导也可以
 
   - 冒泡排序
 
+    ```go
+    //冒泡排序
+    func BubbleSort(arr *[5]int) {
+    	fmt.Println("排序当前arr=", (*arr))
+    	temp := 0
+    	for i := 0; i < len(*arr)-1; i++ {
+    		for j := 0; j < len(*arr)-1-i; j++ {
+    			if (*arr)[j] > (*arr)[j+1] {
+    				// 交换
+    				temp = (*arr)[j]
+    				(*arr)[j] = (*arr)[j+1]
+    				(*arr)[j+1] = temp
+    			}
+    		}
+    	}
+    	fmt.Println("排序后的arr=", (*arr))
+    }
     
-
+    func main() {
+    	arr := [5]int{24, 68, 80, 57, 13}
+    	BubbleSort(&arr)
+    }
+    ```
+  
   - 快速排序
+  
+  ###### 二分查找：
+  
+  ```go
+  // 二分查找
+  func BinaryFind(arr *[5]int, leftIndex int, rightIndex int, findVal int) {
+     // 判断leftIndex是否大于rightIndex
+     if leftIndex > rightIndex {
+        fmt.Println("找不到")
+        return
+     }
+     // 先找到 中间的下标
+     middle := (leftIndex + rightIndex) / 2
+     if (*arr)[middle] > findVal {
+        BinaryFind(arr, leftIndex, middle-1, findVal)
+     } else if (*arr)[middle] < findVal {
+        BinaryFind(arr, middle+1, rightIndex, findVal)
+     } else {
+        fmt.Printf("找到了，下标为%v\n", middle)
+     }
+  }
+  arr := [5]int{24, 68, 80, 57, 13}
+  BinaryFind(&arr, 0, len(arr)-1, 1000)
+  ```
+
+##### 二维数组：
+
+- 使用方式1：var 数组名 \[大小][大小]类型
+
+- 使用方式2：var 数组名 \[大小][大小]类型 = \[大小][大小]类型{{初值..},{初值..}}
+
+  赋值(有默认值，比如int 类型的就是0)
+
+说明：
+
+二维数组在声明/定义时也有对应的四种写法[和一维数组类似]
+
+```go
+var 数组名 [大小][大小]类型 = [大小][大小]类型{{初值...},{初值...}}
+var 数组名 [大小][大小]类型 = [...][大小]类型{{初值..},{初值..}}
+var 数组名 = [大小][大小]类型{{初值..},{初值..}}
+var 数组名 = [...][大小]类型{{初值..},{初值..}}
+```
+
+###### 二维数组的遍历：
+
+```go
+// 演示二维数组的遍历
+var arr3 = [2][3]int{{1, 2, 3}, {4, 5, 6}}
+
+// for循环来遍历
+for i := 0; i < len(arr3); i++ {
+    for j := 0; j < len(arr3[i]); j++ {
+        fmt.Printf("%v\t", arr3[i][j])
+    }
+    fmt.Println()
+}
+
+// for-range来遍历二维数组
+for i, v := range arr3 {
+    for j, v2 := range v {
+        fmt.Printf("arr3[%v][%v]=%v \t", i, j, v2)
+    }
+    fmt.Println()
+}
+```
 
 
 
 
-
-​		
 
 
 
