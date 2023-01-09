@@ -1280,13 +1280,62 @@ map遍历：
 
 使用for-range的结构遍历
 
+```go
+// for-range遍历
+for k, v := range cities {
+	fmt.Printf("k=%v v=%v", k, v)
+}
+```
 
+map的长度：
 
+fmt.Println(len(stus))
 
+###### map切片：
 
+map的个数可以动态变化
 
+```go
+//这里我们需要使用到切片的append函数，可以动态的增加monster
+//1.先定义个monster信息
+newMonster := map[string]string{
+    "name": "新的妖怪",
+    "age":  "200",
+}
+monsters = append(monsters, newMonster)
+fmt.Println(monsters)
+```
 
+###### map排序：
 
+- Go中没有一个专门的方法针对map的key进行排序
+- Go中的map默认是无序的，注意也不是按照添加的顺序存放的，你每次遍历得到的输出可能不一样
+- Go中map的排序，是先将key进行排序，然后根据key值遍历输出即可
+
+```go
+//map的排序
+map1 := make(map[int]int, 10)
+map1[10] = 100
+map1[1] = 13
+map1[4] = 56
+map1[8] = 90
+fmt.Println(map1)
+// 如果按照map的key的顺序进行排序输出
+//1.先将map的key放入到切片中
+//2.对切片排序
+//3.遍历切片，然后按照key来输出map的值
+var keys []int
+for k, _ := range map1 {
+    keys = append(keys, k)
+}
+// 排序
+sort.Ints(keys)
+fmt.Println(keys)
+
+for _, k := range keys {
+    fmt.Printf("map1[%v]=%v \n", k, map1[k])
+}
+```
 
 
 
