@@ -1105,19 +1105,180 @@ for i, v := range arr3 {
 }
 ```
 
+代码太长换行的时候末尾带一个逗号
 
+##### map:
 
+map是key-value数据结构，又称为字段或关联数组，类似其它编程语言的集合在编程中经常使用到
 
+基本语法：
 
+var map 变量名 map[keytype]valuetype
 
+- key可以是什么类型
 
+  golang中的map的key可以是多种类型，比如bool、数字、string、指针、channel还可以是只包含前面几个类型的接口、结构体、数组。通常为**int、string**
 
+  注意：slice、map还有function不可以，因为这几个没法用 == 来判断
 
+- valuetype可以是什么类型
 
+  valuetype的类型和key基本一样
 
+  通常为：数字（整数、浮点数）string、map、struct
 
+map声明举例：
 
+```go
+var a map[string]string
+var a map[string]int
+var a map[int]string
+var a map[string]map[string]string
+```
 
+注意：声明是不会分配内存的，初始化需要make，分配内存后才能赋值和使用
+
+```go
+// map的声明和注意事项
+var a map[string]string
+// 组使用map前，需要先make，make的作用就是给map分配数据空间
+a = make(map[string]string, 10)
+a["1"] = "宋江"
+a["2"] = "吴用"
+a["3"] = "武松"
+a["4"] = "公孙胜"
+fmt.Println(a)
+```
+
+说明：
+
+1. map在使用前一定要make
+2. map的key是不能重复，如果冲服，则以最后这个key-value为准
+3. map的value是可以相同的
+4. map的key-value 是无序的
+5. make内置函数数目
+
+###### map的使用方式：
+
+- 方式1：
+
+  ```go
+  // map的声明和注意事项
+  var a map[string]string
+  // 组使用map前，需要先make，make的作用就是给map分配数据空间
+  a = make(map[string]string, 10)
+  a["1"] = "宋江"
+  a["2"] = "吴用"
+  a["3"] = "武松"
+  a["4"] = "公孙胜"
+  fmt.Println(a)
+  ```
+
+- 方式2：
+
+  ```go
+  // 第二种方式
+  cities := make(map[string]string)
+  cities["1"] = "北京"
+  cities["2"] = "天津"
+  cities["3"] = "上海"
+  fmt.Println(cities)
+  ```
+
+- 方式3：
+
+  ```go
+  // 第三种方式
+  heroes := map[string]string{
+  "hero1": "宋江",
+  "hero2": "卢俊义",
+  }
+  fmt.Println(heroes)
+  ```
+
+案例：
+
+```go
+/*
+练习：演示一个key-value 的value是map的案例
+比如：我们要存放3个学生信息，每个学生有name和sex信息
+思路：map[string]map[string]string
+*/
+studentMap := make(map[string]map[string]string)
+
+studentMap["stu01"] = make(map[string]string, 3)
+studentMap["stu01"]["name"] = "tom"
+studentMap["stu01"]["sex"] = "男"
+studentMap["stu01"]["address"] = "北京长安街"
+
+studentMap["stu02"] = make(map[string]string, 3) // 不能少
+studentMap["stu02"]["name"] = "mary"
+studentMap["stu02"]["sex"] = "女"
+studentMap["stu02"]["address"] = "上海黄浦江"
+
+fmt.Println(studentMap)
+fmt.Println(studentMap["stu02"])
+fmt.Println(studentMap["stu02"]["address"])
+```
+
+###### map的增删改查crud操作：
+
+map增加和更新：
+
+map["key"] = value  // 如果key还没有，就是增加，如果key存在就是修改
+
+```go
+cities := make(map[string]string)
+cities["1"] = "北京"
+cities["2"] = "天津"
+cities["3"] = "上海"
+fmt.Println(cities)
+cities["3"] = "上海~"
+fmt.Println(cities)
+```
+
+map删除：
+
+delete(map,"key")，delete是一个内置函数，如果key存在，就删除该key-value如果key不存在，不操作，但是也不会报错
+
+```
+delete(cities,"1")
+// 当delete指定的key不存在时，删除不会操作，也不会报错
+```
+
+细节说明：
+
+- 如果要删除map所以的key，没有一个专门的方法一次删除，可以遍历一下key逐个删除
+
+- 或者map = make(...)，make一个新的，让原来的称为垃圾，被gc回收
+
+  ```go
+  cities = make(map[string]string)
+  fmt.Println(cities)
+  ```
+
+map查找：
+
+```go
+val,findRes = heroes["no1"]
+```
+
+说明：如果heroes这个map中存在"no1"，那么findRes就会返回true 否则返回false
+
+演示：
+
+```go
+val,ok := cities["no2"]
+if ok {
+    fmt.Printf("有no1 key值为%v\n", val)
+} else {
+    fmt.Printf("没有no1 key\n")
+}
+```
+
+map遍历：
+
+使用for-range的结构遍历
 
 
 
