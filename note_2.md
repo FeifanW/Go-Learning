@@ -1337,23 +1337,204 @@ for _, k := range keys {
 }
 ```
 
+###### map使用细节：
 
+- map是引用类型，遵循引用类型传递的机制，在一个函数接收map，修改后，会直接修改原来的map
+- map的容量达到后，再想map增加元素，会自动扩容，并不会发生panic，也就是说map能**动态的增长键值对**（key-value）
+- map的value也经常使用struct类型， 更适合管理复杂的数据（比前面的value是一个map更好），比如value为Student结构体
 
+```go
+package main
 
+import "fmt"
 
+func modify(map1 map[int]int) {
+	map1[10] = 900
+}
 
+//定义一个学生结构体
+type Stu struct {
+	Name    string
+	Age     int
+	Address string
+}
 
+func main() {
+	// map是引用类型，遵守引用类型传递的机制，在一个函数接收map
+	// 修改后，会直接修改原来的map
+	map1 := make(map[int]int)
+	map1[1] = 90
+	map1[2] = 88
+	map1[10] = 1
+	map1[20] = 2
+	modify(map1)
+	fmt.Println(map1)
 
+	//map的value 也经常使用struct类型
+	//更适合管理复杂的数据（比前面的value是一个map更好）
+	//比如value为Student结构体
+	//1.map的key为学生的学号，是唯一的
+	//2.map的value为结构体，包含学生的姓名，年龄，地址
+	students := make(map[string]Stu, 10)
+	// 创建2个学生
+	stu1 := Stu{"tom", 18, "北京"}
+	stu2 := Stu{"mary", 20, "上海"}
+	students["no1"] = stu1
+	students["no2"] = stu2
 
+	fmt.Println(students)
+	// 遍历各个学生信息
+	for k, v := range students {
+		fmt.Printf("学生的编号是%v\n", k)
+		fmt.Printf("学生的名字是%v\n", v.Name)
+		fmt.Printf("学生的年龄是%v\n", v.Age)
+		fmt.Printf("学生的地址是%v\n", v.Address)
+		fmt.Println()
+	}
+}
 
+```
 
+案例：
 
+1. 使用map[string]map[string]string 的map类型
+2. key：表示用户名，是唯一的，不可以重复
+3. 如果某个用户名存在，就将其密码修改为"888888"，如果不存在就增加这个用户信息，(包括昵称nickname)
+4. 编写一个函数 modifyUser(users  map[string]map[string]string, name string) 完成上述功能
 
+##### 面向对象编程：
 
+说明：
 
+- Go支持面向对象编程（OOP），但是和传统的面向对象编程有区别，并不是**纯粹的面向对象的语言**，所以说**Go支持面向对象编程特性**是比较准确的
+- Go没有类class，Go语言的结构体(struct)和其它编程语言的类(class)有同等的地位，你可以理解Go是基于struct来实现OOP特性的
+- Go面向对象编程非常简洁，去掉了传统OOP语言的继承、方法重载、构造函数和析构函数、隐藏的this指针等等
+- Go仍然有面向对象编程的继承、封装和多态的特性，只是实现的方式和其他OOP语言不一样，**比如继承**：Go没有extends关键字，继承是通过匿名字段来实现
+- Go的面向对象(OOP)很优雅，OOP本身就是语言类型系统的一部分，通过接口（interface）关联，耦合性低，也非常灵活
 
+```go
+package main
 
+import "fmt"
 
+//定义一个Cat结构体，将Cat的各个字段/属性信息，放入到Cat结构体进行管理
+type Cat struct {
+	Name  string
+	Age   int
+	Color string
+	Hobby string
+}
+
+func main() {
+	// 创建一个Cat变量
+	var cat1 Cat
+	cat1.Name = "小白"
+	cat1.Age = 3
+	cat1.Color = "白色"
+	cat1.Hobby = "吃鱼"
+	fmt.Println("cat1=", cat1)
+	fmt.Println("猫猫的信息如下", "")
+	fmt.Println("Age=", cat1.Age)
+	fmt.Println("color=", cat1.Color)
+	fmt.Println("hobby=", cat1.Hobby)
+
+}
+```
+
+结构体和结构体变量（实例）的区别和联系
+
+1. 结构体是自定义的数据类型，代表一类事物
+2. 结构体变量（实例）是具体的，实际的，代表一个具体变量
+
+结构体是值类型，不是引用类型
+
+声明结构体：
+
+```go
+type 标识符 struct{
+	field1 type
+	field2 type
+}
+```
+
+1. 从概念或叫法上看：结构体字段 = 属性 = field (即授课中：统一叫字段)
+2. 字段是结构体的一个组成部分，一般是基本数据类型、数组，也可以是引用类型。比如我们前面定义的猫结构体的Name string 就是属性
+
+```go
+type Cat struct {
+	Name  string
+	Age   int
+	Color string
+	Scores [3]int   // 可以定义数组
+	Hobby string
+}
+```
+
+字段/属性
+
+注意事项和细节说明：
+
+1. 字段声明语法同变量，示例：字段名 字段类型
+
+2. 字段的类型可以为：基本类型、数组或引用类型
+
+3. 在创建一个结构体变量后，如果没有给字段赋值，都对应一个零值(默认值)，规则同前将的一样：
+
+   布尔类型是false 数字是0 字符串是""
+
+   数组类型的默认值和它的元素类型相关，比如score [3]int则为[0,0,0]
+
+   指针 slice 和 map的零值都是nil，即还没有分配空间
+
+4. **不同的结构体变量**的字段是独立的，互不影响，一个结构体变量字段的更改，不影响另外一个
+
+```go
+// 如果结构体的字段类型是：指针、slice和map的零值都是nil，即还没有分配空间
+// 如果需要使用这样的字段，需要先make,才能使用
+type Person struct {
+	Name   string
+	Age    int
+	Scores [5]float64
+	ptr    *int
+	slice  []int
+	map1   map[string]string // 切片
+}
+type Monster struct {
+	Name   string
+	Age    int
+	Scores [5]float64
+	ptr    *int
+	slice  []int
+	map1   map[string]string // 切片
+}
+
+func main() {
+	// 定义结构体变量
+	var p1 Person
+	fmt.Println(p1)
+
+	// 使用slice 再次说明，一定要make
+	p1.slice = make([]int, 10)
+	p1.slice[0] = 100
+
+	// 使用map,一定要先make
+	p1.map1 = make(map[string]string)
+	p1.map1["key1"] = "tom~"
+	fmt.Println(p1)
+
+	//不同结构体变量的字段是独立，互不影响，一个结构体变量字段的更改不影响另外一个，结构体是值类型
+	var monster1 Monster
+	monster1.Name = "牛魔王"
+	monster1.Age = 500
+
+	monster2 := monster1 // 结构体是值类型，默认为值拷贝
+	//monster2 := &monster1 // 如果想改同一个，则传地址
+	monster2.Name = "青牛精"
+
+	fmt.Println("monster1=", monster1)
+	fmt.Println("monster2=", monster2)
+}
+```
 
 
 
