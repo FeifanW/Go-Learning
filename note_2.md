@@ -1536,6 +1536,263 @@ func main() {
 }
 ```
 
+##### 创建结构体实例的四种方法：
+
+```go
+// 如果结构体的字段类型是：指针、slice和map的零值都是nil，即还没有分配空间
+// 如果需要使用这样的字段，需要先make,才能使用
+type Person struct {
+	Name string
+	Age  int
+	//Scores [5]float64
+	//ptr    *int
+	//slice  []int
+	//map1   map[string]string // 切片
+}
+func main() {
+	// 方式1
+	// 方式2
+	p2 := Person{"mary", 20}
+	p2.Name = "tom"
+	p2.Age = 18
+	fmt.Println(p2)
+
+	// 方式3-&
+	// 案例：var person *Person = new (Person)
+
+	var p3 *Person = new(Person)
+	// 因为p3是一个指针，因此标准的给字段赋值方式
+	//(*p3).Name = "smith" 也可以这样写 p3.Name = "smith"
+	//原因：go的设计者，为了程序员使用方便，底层会对p3.Name = "smith"进行处理
+	// 会给p3加上 取值运算（*p3).Name = "smith"
+	(*p3).Name = "smith"
+	p3.Name = "john"
+	(*p3).Age = 30
+	fmt.Println(*p3)
+
+	//方式4 -{}
+	// 案例：var person *Person = &Person{}
+	// 下面的语句，也可以直接给字符串赋值
+	// var person *Person = &Person{"mary",60}
+	var person *Person = &Person{}
+	// 因为person是一个指针，因此标准的访问字段的方法
+	// (*person).Name = "scott"
+	// go的设计者为了程序员使用方便，也可以person.Name = "scott"
+	// 原因和上面一样，底层会对person.Name = "scott" 进行处理，会加上（*person）
+	(*person).Name = "scott"
+	person.Name = "scott~~"
+	(*person).Age = 88
+	person.Age = 10
+	fmt.Println(*person)
+
+}
+```
+
+##### 结构体使用细节：
+
+```go
+package main
+
+import "fmt"
+
+type Point struct {
+	x int
+	y int
+}
+
+type Rect struct {
+	leftUp, rightDown Point
+}
+type Rect2 struct {
+	leftUp, rightDown *Point
+}
+
+func main() {
+	r1 := Rect{Point{1, 2}, Point{3, 4}}
+	// r1有四个int，在内存中是连续分布
+	// 打印地址
+	fmt.Printf("r1.leftUp.x 地址是=%p r1.leftUp.y 地址=%p r1.rightDown.x 地址=%p r1.rightDown.y 地址=%p  \n", &r1.leftUp.x, &r1.leftUp.y, &r1.rightDown.x, &r1.rightDown.y)
+
+	// r2有两个 *Point类型，这个两个*Point类型的本身地址也是连续的
+	// 但是他们指向的地址不一定是连续的
+	r2 := Rect2{&Point{10, 20}, &Point{30, 40}}
+	// 打印地址
+	fmt.Printf("r2.leftUp 本身地址是=%p r2.rightDown 本身地址=%p  \n", &r2.leftUp, &r2.rightDown)
+	fmt.Printf("r2.leftUp 指向地址是=%p r2.rightDown 指向地址=%p  \n", r2.leftUp, r2.rightDown)
+
+}
+```
+
+结构体是用户单独定义的类型，和其它类型进行转换时需要有完全相同的字段（名字、个数和类型）
+
+```go
+type A struct {
+	Num int
+}
+type B struct {
+	Num int
+}
+
+func main() {
+	var a A
+	var b B
+	a = A(b) // 可以转换，但是有要求，就是结构体的字段要完全一样（包括：名字、个数和类型）
+	fmt.Println(a, b)
+}
+```
+
+结构体进行type重新定义（相当于取别名），Go认为是新的数据类型，但是相互间可以强转
+
+```go
+type integar int
+func main(){
+    var i interger = 10
+    var j int = 20
+    j = int(i)   // j=i是不正确的
+    fmt.Println(i,j)
+}
+```
+
+struct的每个字段上，可以写上一个tag，该tag可以通过反射机制获取，场景的使用场景就是序列化和反序列化
+
+```go
+type Monster struct {
+	Name  string `json:"name"`
+	Age   int    `json:"age"`
+	Skill string `json:"skill"`
+}
+
+func main() {
+	//1.创建一个Monster变量
+	monster := Monster{"牛魔王", 500, "芭蕉扇~"}
+	//2.将monster变量序列化为json格式字串
+	// json.Marshal 函数中使用反射
+	jsonStr, err := json.Marshal(monster)
+	if err != nil {
+		fmt.Println("json处理错误", err)
+	}
+	fmt.Println("jsonStr", string(jsonStr))
+}
+```
+
+##### 方法：
+
+Go中的方法是作用在指定的数据类型上的（即：和指定的数据类型绑定），因此**自定义类型，都可以有方法**，而不仅仅是struct
+
+方法的声明和调用
+
+```go
+type A struct {
+	Num int 
+}
+func (a A)test() {
+	fmt.Println(a.Num)
+}
+```
+
+对上面语法的说明
+
+1. func (a A) test() {} 表示A结构体有一方法，方法名为 test
+2. (a A)体现 test 方法是和A类型绑定的
+
+```go
+type Person struct {
+	Name string
+}
+
+// 给Person类型绑定一方法
+func (p Person) test() {
+	fmt.Println("test() name=", p.Name)
+}
+
+func main() {
+	var p Person
+	p.Name = "tom"
+	p.test()
+}
+```
+
+总结：
+
+1. test方法和Person类型绑定
+2. test方法只能通过Person类型的变量来调用，而不能直接调用，也不能使用其它类型变量来调用
+3. func (p Person) test() {} ... p 表示哪个Person变量调用，这个p就是它的副本，这点和函数传参非常相思
+4. p这个名字，由程序员指定，不是固定，比如修改成person也是可以的
+
+###### 方法的调用和传参机制：
+
+说明：
+
+1. 在通过一个变量去调用方法时，其调用机制和函数一样
+2. 不一样的地方时，变量调用方法时，该变量本身也会作为一个参数传递到方法（如果变量是值类型，则进行只拷贝，如果变量是引用类型，则进行值拷贝）
+
+###### 方法的声明（定义）：
+
+注意事项和细节：
+
+- 结构体类型是值类型，在方法调用中，遵循值类型的传递机制，是值拷贝传递方式
+
+- 如果希望在方法中，修改结构体变量的值，可以通过结构体指针的方式来处理
+
+- Go中的**方法作用在指定的数据类型上**的（即：**和指定的数据类型绑定**），因此**自定义类型，都可以有方法**，而不仅仅是struct，比如int，float32等都可以有方法
+
+  ```go
+  type integer int
+  func (i integer) print() {
+      fmt.Println("i=",i)
+  }
+  //编写一个方法，可以改变i的值
+  func (i *integer) change(){
+      *i = *i + 1
+  }
+  func main() {
+      var i integer = 10
+      i.print()
+      i.change()
+      fmt.Println("i=",i)
+  }
+  ```
+
+- 放大的访问范围控制的规则，和函数一样，方法名首字母小写，只能在本包访问，方法首字母大写，可以在本包和其它包访问
+
+- 如果一个变量实现了String()这个方法，那么fmt.Println默认会调用这个变量的String()进行输出
+
+  ```go
+  type Student struct {
+      Name string
+      Age int
+  }
+  // 给*student实现方法string()
+  func (stu *Student) String() string {
+      str := fmt.Sprintf("Name=[%v] Age=[%v]",stu.Name, stu.Age)
+      return str
+  }
+  ```
+
+  ```go
+  // 定义一个Student变量
+  stu := Student{
+      Name : "tom",
+      Age : 20,
+  }
+  //如果实现了 *Student 类型的 String方法，就会自动调用
+  fmt.Println(&stu)
+  ```
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
