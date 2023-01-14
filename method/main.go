@@ -32,15 +32,32 @@ type Person struct {
 }
 
 // 给Person类型绑定一方法
-func (p Person) test() {
-	fmt.Println("test() name=", p.Name)
+//func (p Person) test() {
+//	fmt.Println("test() name=", p.Name)
+//}
+
+func (p Person) test03() {
+	p.Name = "jack"
+	fmt.Println("test03() =", p.Name)
+}
+func (p *Person) test04() {
+	p.Name = "mary"
+	fmt.Println("test04() =", p.Name)
 }
 
 func main() {
+	p := Person{"tom"}
+	p.test03()
+	fmt.Println("main() p.name=", p.Name) //tom
+	(&p).test03()                         // 从形式上传入地址，但本质仍然是值拷贝
+	fmt.Println("main() p.name=", p.Name) // tom
+	(&p).test04()
+	fmt.Println("main() p.name=", p.Name) // mary
+	p.test04()                            // 等价于(&p).test04()  编译器自动处理，从形式上是传入值类型，但是本质任然是地址拷贝
 
-	var p Person
-	p.Name = "tom"
-	p.test()
+	//var p Person
+	//p.Name = "tom"
+	//p.test()
 
 	////1.创建一个Monster变量
 	//monster := Monster{"牛魔王", 500, "芭蕉扇~"}

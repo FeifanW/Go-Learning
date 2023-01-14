@@ -1779,7 +1779,51 @@ func main() {
   fmt.Println(&stu)
   ```
 
-  
+
+###### 方法和函数的区别：
+
+1. 调用方式不一样
+
+   函数的调用方式：   函数名（实参列表）
+
+   方法的调用方式：   变量.方法名（实参列表）
+
+2. 对于普通函数，接受者为值类型时，不能将指针类型的数据直接传递，反之亦然
+
+3. 对于方法（如struct的方法），接受者为值类型时，可以直接使用指针类型的变量调用方法，反过来同样也可以
+
+```go
+func (p Person) test03() {
+	p.Name = "jack"
+	fmt.Println("test03() =", p.Name)
+}
+func (p *Person) test04() {
+	p.Name = "mary"
+	fmt.Println("test04() =", p.Name)
+}
+
+func main() {
+	p := Person{"tom"}
+	p.test03()
+	fmt.Println("main() p.name=", p.Name) //tom
+	(&p).test03()                         // 从形式上传入地址，但本质仍然是值拷贝
+	fmt.Println("main() p.name=", p.Name) // tom
+	(&p).test04()
+	fmt.Println("main() p.name=", p.Name) // mary
+	p.test04()                            // 等价于(&p).test04()  编译器自动处理，从形式上是传入值类型，但是本质任然是地址拷贝
+}
+```
+
+总结：
+
+- 不管调用形式如何，真正决定是值拷贝还是地址拷贝，看这个方法是和那个类型绑定
+- 如果是和值类型，比如（p Person），则是值拷贝，如果和指针类型，比如是（p *Person）则是地址拷贝
+
+面向对象编程应用实例：
+
+1. 声明结构体，确定结构体名
+2. 编写结构体字段
+3. 编写结构体的方法
 
 
 
