@@ -1825,11 +1825,93 @@ func main() {
 2. 编写结构体字段
 3. 编写结构体的方法
 
+###### 创建结构体变量时指定字段值：
 
+```go
+type Stu struct {
+	Name string
+	Age  int
+}
 
+func main() {
 
+	// 方式1
+	// 在创建结构体变量时，就直接指定字段的值
+	var stu1 = Stu{"小明", 19}
+	stu2 := Stu{"小明~", 20}
+	//在创建结构体变量时，把字段名和字段值写在一起，这种写法，就不依赖字段的定义顺序
+	var stu3 = Stu{
+		Name: "jack",
+		Age:  20,
+	}
+	stu4 := Stu{
+		Age:  30,
+		Name: "mary",
+	}
+	fmt.Println(stu1, stu2, stu3, stu4)
 
+	//方法2， 返回结构体的指针类型
+	var stu5 = &Stu{"小王", 29}
+	stu6 := &Stu{"小王~", 39}
+	//在创建结构体指针变量时，把字段名和字段值写在一起，这种写法不依赖字段的定义顺序
+	var stu7 = &Stu{
+		Name: "小李",
+		Age:  49,
+	}
+	stu8 := &Stu{
+		Age:  59,
+		Name: "小李~",
+	}
+	fmt.Println(*stu5, *stu6, *stu7, *stu8)
+}
+```
 
+##### 工厂模式：
+
+Go结构体没有构造函数，通常可以使用工厂模式来解决这个问题
+
+```go
+package model
+type Student struct{
+    Name string...
+}
+```
+
+如果想让类型是小写，而且在其他包里面可以创建这个类型，则需要用到工厂模式
+
+用的时候：
+
+```go
+package main
+import (
+	"fmt"
+    "model"
+)
+func mian() {
+    // 定student结构体是首字母小写，我们可以通过工厂模式来解决
+    var stu = model.NewStudent("tom~",88)
+    fmt.Println(*stu)
+    fmt.Println("name=",stu.Name, "score=",stu.Score)
+}
+```
+
+ model包里：
+
+```go
+//因为student结构体首字母是小写，因此是只能在model使用
+//我们通过工厂模式来解决
+func NewStudent(n string, s float64) *student{
+    return &student{
+        Name: n,
+        Score: s,
+        //score: s,
+    }
+}
+// 如果score字段首字母小写，则在其它包不可以直接访问，我们可以提供一个方法
+func (s *student) GetScore() float64{
+    return s.score
+}
+```
 
 
 

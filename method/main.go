@@ -27,33 +27,68 @@ import "fmt"
 //	Skill string `json:"skill"`
 //}
 
-type Person struct {
-	Name string
-}
+//type Person struct {
+//	Name string
+//}
 
 // 给Person类型绑定一方法
 //func (p Person) test() {
 //	fmt.Println("test() name=", p.Name)
 //}
 
-func (p Person) test03() {
-	p.Name = "jack"
-	fmt.Println("test03() =", p.Name)
-}
-func (p *Person) test04() {
-	p.Name = "mary"
-	fmt.Println("test04() =", p.Name)
+//func (p Person) test03() {
+//	p.Name = "jack"
+//	fmt.Println("test03() =", p.Name)
+//}
+//func (p *Person) test04() {
+//	p.Name = "mary"
+//	fmt.Println("test04() =", p.Name)
+//}
+
+type Stu struct {
+	Name string
+	Age  int
 }
 
 func main() {
-	p := Person{"tom"}
-	p.test03()
-	fmt.Println("main() p.name=", p.Name) //tom
-	(&p).test03()                         // 从形式上传入地址，但本质仍然是值拷贝
-	fmt.Println("main() p.name=", p.Name) // tom
-	(&p).test04()
-	fmt.Println("main() p.name=", p.Name) // mary
-	p.test04()                            // 等价于(&p).test04()  编译器自动处理，从形式上是传入值类型，但是本质任然是地址拷贝
+
+	// 方式1
+	// 在创建结构体变量时，就直接指定字段的值
+	var stu1 = Stu{"小明", 19}
+	stu2 := Stu{"小明~", 20}
+	//在创建结构体变量时，把字段名和字段值写在一起，这种写法，就不依赖字段的定义顺序
+	var stu3 = Stu{
+		Name: "jack",
+		Age:  20,
+	}
+	stu4 := Stu{
+		Age:  30,
+		Name: "mary",
+	}
+	fmt.Println(stu1, stu2, stu3, stu4)
+
+	//方法2， 返回结构体的指针类型
+	var stu5 = &Stu{"小王", 29}
+	stu6 := &Stu{"小王~", 39}
+	//在创建结构体指针变量时，把字段名和字段值写在一起，这种写法不依赖字段的定义顺序
+	var stu7 = &Stu{
+		Name: "小李",
+		Age:  49,
+	}
+	stu8 := &Stu{
+		Age:  59,
+		Name: "小李~",
+	}
+	fmt.Println(*stu5, *stu6, *stu7, *stu8)
+
+	//p := Person{"tom"}
+	//p.test03()
+	//fmt.Println("main() p.name=", p.Name) //tom
+	//(&p).test03()                         // 从形式上传入地址，但本质仍然是值拷贝
+	//fmt.Println("main() p.name=", p.Name) // tom
+	//(&p).test04()
+	//fmt.Println("main() p.name=", p.Name) // mary
+	//p.test04()                            // 等价于(&p).test04()  编译器自动处理，从形式上是传入值类型，但是本质任然是地址拷贝
 
 	//var p Person
 	//p.Name = "tom"
