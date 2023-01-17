@@ -174,6 +174,91 @@ type Book struct {
 
 3. 当结构体和匿名结构体有相同的字段或方法时，编译器采用就近访问原则，如希望访问匿名结构体的字段和方法，可以通过匿名结构体来区分
 
+4. 结构体嵌入两个（或多个）匿名结构体，如果两个匿名结构体有相同的字段和方法（同时结构体半身没有同名的字段和方法）,在访问时，就必须明确指明匿名结构体名字否则编译报错
+
+   ```go
+   type A struct {
+       Name string
+       Age int
+   }
+   type B struct {
+       Name string
+       score int
+   }
+   type C struct {
+       A
+       B
+       // Name string
+   }
+   ```
+
+5. 如果一个struct嵌套了一个有名结构体，这种模式就是**组合**，如果是组合关系，哪么在访问组合的结构体的字段或方法时，必须带上结构体的名字
+
+   ```go
+   type A struct {
+       Name string
+       Age int
+   }
+   type C struct {
+       a A
+   }
+   ```
+
+6. 嵌套匿名结构体后，也可以在创建结构体变量（实例）时，直接指定各个匿名结构体字段的值
+
+   ```go
+   type Goods struct {
+   	Name  string
+   	Price float64
+   }
+   
+   type Brand struct {
+   	Name    string
+   	Address string
+   }
+   
+   type TV struct {
+   	Goods
+   	Brand
+   }
+   
+   type TV2 struct {
+   	*Goods
+   	*Brand
+   }
+   
+   func main() {
+   	// 嵌套匿名结构体后，也可以在创建结构体变量（实例）时，直接指定各个匿名结构体字段的值
+   	tv := TV{Goods{"电视机", 5000.99}, Brand{"海尔", "山东"}}
+   	tv2 := TV{
+   		Goods{
+   			Name:  "电视机",
+   			Price: 5000.99,
+   		},
+   		Brand{
+   			Name:    "海尔",
+   			Address: "山东",
+   		},
+   	}
+   	fmt.Println("tv", tv)
+   	fmt.Println("tv2", tv2)
+   
+   	tv3 := TV2{&Goods{"电视机", 7000.5}, &Brand{"创维", "河南"}}
+   	tv4 := TV2{
+   		&Goods{
+   			Name:  "电视机",
+   			Price: 7000.5,
+   		},
+   		&Brand{"创维", "河南"}}
+   	fmt.Println("tv3", *tv3.Goods, *tv3.Brand)
+   	fmt.Println("tv4", *tv4.Goods, *tv4.Brand)
+   }
+   ```
+
+   
+
+
+
 
 
 
