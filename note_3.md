@@ -255,9 +255,172 @@ type Book struct {
    }
    ```
 
+   ```
+   type Monster struct {
+   	Name string
+   	Age  int
+   }
    
+   type E struct {
+   	Monster
+   	int
+   }
+   
+   func main() {
+   	var e E
+   	e.Name = "狐狸"
+   	e.Age = 300
+   	e.int = 20
+   	e.n = 40
+   	fmt.Println("e=",e)
+   }
+   ```
+   
+   说明：
+   
+   1. 如果一个结构体有int类型的匿名字段，就不能第二个
+   2. 如果需要有多个int字段，则必须给int字段
+   
+   多重继承说明：
+   
+   如一个struct嵌套了多个匿名结构体，那么该结构体可以直接访问嵌套的匿名结构体的字段和方法，从而实现了多重继承
 
+###### 接口：
 
+按照顺序应该讲解多态，但是讲解多态前，需要讲解接口，因为Go中多态特性主要是通过接口体现的
+
+```go
+package main
+
+import "fmt"
+
+// 声明/定义一个接口
+type Usb interface {
+	// 声明了两个没有实现的方法
+	Start()
+	Stop()
+}
+type Phone struct {
+}
+
+// 让Phone实现Usb接口的方法
+func (p Phone) Start() {
+	fmt.Println("手机开始工作")
+}
+func (p Phone) Stop() {
+	fmt.Println("手机停止工作")
+}
+
+type Camera struct {
+}
+
+// 让Camera实现 Usb接口的方法
+func (c Camera) Start() {
+	fmt.Println("相机开始工作")
+}
+func (c Camera) Stop() {
+	fmt.Println("相机停止工作")
+}
+
+// 计算机
+type Computer struct {
+}
+
+// 编写一个方法Working方法，接收一个Usb接口类型变量
+// 只要实现了Usb接口（所谓实现Usb接口，就是指实现了Usb接口声明的所有方法）
+func (c Computer) Working(usb Usb) {
+	// 通过usb接口变量来调用Start和Stop方法
+	usb.Start()
+	usb.Stop()
+}
+func main() {
+	//测试
+	//先创建结构体变量
+	computer := Computer{}
+	phone := Phone{}
+	camera := Camera{}
+	//关键点
+	computer.Working(phone)
+	computer.Working(camera)
+}
+```
+
+interface类型可以定义一组方法，但是这些不需要实现，并且interface不能包含任何变量，到某个自定义类型要使用的时候，在根据具体情况把这些方法写出来（实现）
+
+基本语法：
+
+```go
+type 接口名 interface {
+    method1(参数列表) 返回值列表
+    method2(参数列表) 返回值列表
+    ...
+}
+```
+
+实现接口所有方法
+
+```go
+func (t 自定义类型) method1(参数列表) 返回值列表 {
+    // 方法实现
+}
+func (t 自定义类型) method2(参数列表) 返回值列表 {
+    // 方法实现
+}
+// ...
+```
+
+小结说明：
+
+1. 接口里的所有方法都没有方法体，即接口的方法都是没有实现的方法，接口体现了程序设计的**多态和高内聚低耦合**的思想
+2. Go中的接口，不需要显示的实现，只要一个变量，含义接口类型中的所有方法，那么这个变量就实现这个接口，因此**Go中没有implement这样的关键字**
+
+注意细节：
+
+1. 接口本身不能创建实例，但是可以指向一个实现了该接口的自定义类型的变量（实例）
+
+2. 接口中所有的方法都没有方法体，即都是没有实现的方法
+
+3. 在Go中，一个自定义类型需要将某个接口的所有方法都实现，我们说这个自定义类型实现了该接口
+
+4. 一个自定义类型只有实现了某个接口，才能将该自定义类型的实例赋给接口类型
+
+5. 只要是自定义数据类型，就可以实现接口，不仅仅是结构体类型
+
+6. 一个自定义类型可以实现多个接口
+
+   ```go
+   type AInterface interface {
+       Say()
+   }
+   type BInterface interface {
+       Hello()
+   }
+   type Monster struct {
+       
+   }
+   func (m Monster) Hello() {
+       fmt.Println("Monster Hello()")
+   }
+   func (m Monster) Say() {
+       fmt.Println("Monster Say()")
+   }
+   // Monster实现了AInterface和BInterface
+   var monster Monster
+   var a2 AInterface = monster
+   var b2 BInterface = monster
+   a2.Say()
+   b2.Hello()
+   ```
+
+7. Go接口中不能有任何变量
+
+8. 一个接口（比如A接口）可以继承多个别的接口（比如B,C接口），这是如果要实现A接口，也必须将B，C接口的方法也全部实现
+
+9. interface类型默认是一个指针（引用类型），如果没有对interface初始化就使用，那么会输出nil
+
+10. 空节课interface{}没有任何方法，所以所有类型都实现了空接口，即我们可以把任何变量赋给空接口
+
+11. 
 
 
 

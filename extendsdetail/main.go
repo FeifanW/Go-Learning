@@ -39,6 +39,21 @@ type TV2 struct {
 	*Brand
 }
 
+type Monster struct {
+	Name string
+	Age  int
+}
+
+type E struct {
+	Monster
+	int
+}
+// 演示一下匿名字段基本数据类型的使用
+var e E
+e.Name = "狐狸精"
+e.Age = 300
+
+
 func main() {
 	var b B
 	b.A.Name = "tom"
