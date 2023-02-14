@@ -608,15 +608,233 @@ func main(){
 }
 ```
 
+#### 二、文件操作
 
+文件在程序中是以流的形式来操作的
 
+流：数据在数据源（文件）和程序（内存）之间经历的路径
 
+输入流：数据从数据源（文件）到程序（内存）的路径
 
+输出流：数据从程序（内存）到数据源（文件）的路径
 
+**os.File**封装所有文件相关操作，File是一个结构体
 
+##### 常用的文件操作函数和方法：
 
+- 打开一个文件进行读操作：
 
+  os.Open(name string)(*File, error)
 
+- 关闭一个文件
+
+  File.Close()
+
+- 其他的函数和方法在案例详解
+
+案例：
+
+```go
+func main() {
+    // 打开文件
+    // 概念说明：file的叫法
+    // 1.file叫file对象
+    // 2.file叫file指针
+    // 3.file叫file文件句柄
+    file, err := os.Open("d:/test/txt")
+    if err != nil {
+        fmt.Println("open file err=",err)
+    }
+    // 输出一下文件，看看文件是什么，看出file就是一个指针*File
+    fmt.Println("file=%v",file)
+    // 关闭文件
+    err = file.Close()
+    if err != nil {
+        fmt.Println("close file err=",err)
+    }
+}
+```
+
+###### 带缓冲的reader读文件：
+
+有缓冲区时读文件不是一次性全部读，而是读一部分处理一部分
+
+```go
+reader := bufio.NewReader(file)
+// 循环的读取文件的内容
+for {
+    str, err := reader.ReadString('\n') // 读到一个换行就结束
+    if err == io.EOF {                  // io.EOF表示文件的末尾
+        break
+    }
+    // 输出内容
+    fmt.Printf(str)
+}
+fmt.Println("文件读取结束")
+```
+
+###### 一次性读取文件：
+
+读取文件的内容并显示在终端（使用ioutil一次将整个文件读入到内存中），这种方式适用于文件不大的情况，相关方法和函数（ioutil.ReadFile）
+
+适用于文件比较小的时候
+
+```go
+// 使用ioutil.ReadFile一次性将文件读取到位
+file := "d:/test.txt"
+content, err := ioutil.ReadFile(file)
+if err != nil {
+    fmt.Printf("read file err=%v", err)
+}
+// 把读取到的内容显示到终端
+//fmt.Printf("%v", content)         //[]byte   输出的都是切片
+fmt.Printf("%v", string(content)) //[]byte   输出的都是数组
+// 因为，我们没有显示Open文件，因此也不需要显示的Close文件
+// 因为，文件的Open和Close被封装到ReadFile 函数内部
+```
+
+###### 写文件操作实例：
+
+func OpenFilename string(flag int perm FileMode)(file *File, err error)
+
+说明：os.OpenFile是一个更一般性的文件打开函数，它会使用指定的选项（如 O_RDONLY等）、指定的模式（如0666等）打开指定名称的文件，如果操作成果，返回的文件对象可用I/O。如果出错，错误底层类型是*PathError
+
+第二个参数：文件打开模式（可以组合）
+
+第三个参数：权限控制（linux）r -> 4 w->2 x->1
+
+FileMode选项在windows下无效，需要在Linux或Unix下才有效
+
+案例：
+
+1. 创建一个新文件，写入5句"Hello,Garden"
+
+   ```go
+   // 创建一个新文件，写入内容 5句 "hello,Gardon"
+   // 1.打开文件 d:/abc.txt
+   filePath := "d:/abc.txt"
+   file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+   if err != nil {
+       fmt.Printf("open file err=%v\n", err)
+       return
+   }
+   
+   // 及时关闭file句柄
+   defer file.Close()
+   // 准备写入5句"hello Gardon"
+   str := "hello,Gardon\r\n"   // 因为有些有可能识别不了\n，比如记事本
+   // 写入时，使用带缓存的*Writer
+   writer := bufio.NewWriter(file)
+   for i := 0; i < 5; i++ {
+       writer.WriteString(str)
+   }
+   // 因为Writer是带缓存，因此在调用WriterString方法时，其实
+   // 内容是先写入到缓存的，所以需要调用Flush方法，将缓冲的数据
+   // 真正的写入到文件中，否则文件中会没有数据
+   writer.Flush()
+   ```
+
+2. 打开一个存在的文件中，将原来的内容覆盖成新的内容10句"今天是情人节"
+
+   ```go
+   // 1.打开文件 d:/abc.txt
+   filePath := "d:/abc.txt"
+   //file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+   file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_TRUNC, 0666) // 第二个表示清空文件内容
+   if err != nil {
+       fmt.Printf("open file err=%v\n", err)
+       return
+   }
+   
+   // 及时关闭file句柄
+   defer file.Close()
+   // 准备写入5句"hello Gardon"
+   str := "今天是情人节\r\n"
+   // 写入时，使用带缓存的*Writer
+   writer := bufio.NewWriter(file)
+   for i := 0; i < 10; i++ {
+       writer.WriteString(str)
+   }
+   // 因为Writer是带缓存，因此在调用WriterString方法时，其实
+   // 内容是先写入到缓存的，所以需要调用Flush方法，将缓冲的数据
+   // 真正的写入到文件中，否则文件中会没有数据
+   writer.Flush()
+   ```
+
+3. 打开一个存在的文件，在原来的内容追加内容"TODAY"
+
+   ```go
+   // 1.打开文件 d:/abc.txt
+   filePath := "d:/abc.txt"
+   //file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+   //file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_TRUNC, 0666) // 第二个表示清空文件内容
+   file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND, 0666) // 第二个表示清空文件内容
+   if err != nil {
+       fmt.Printf("open file err=%v\n", err)
+       return
+   }
+   
+   // 及时关闭file句柄
+   defer file.Close()
+   // 准备写入5句"hello Gardon"
+   str := "TODAY\r\n"
+   // 写入时，使用带缓存的*Writer
+   writer := bufio.NewWriter(file)
+   for i := 0; i < 10; i++ {
+       writer.WriteString(str)
+   }
+   // 因为Writer是带缓存，因此在调用WriterString方法时，其实
+   // 内容是先写入到缓存的，所以需要调用Flush方法，将缓冲的数据
+   // 真正的写入到文件中，否则文件中会没有数据
+   writer.Flush()
+   ```
+
+4. 打开一个存在的文件，将原来的内容读出显示在终端，并且追加5句"加油"
+
+   ```go
+   // 1.打开文件 d:/abc.txt
+   filePath := "d:/abc.txt"
+   //file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+   //file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_TRUNC, 0666) // 第二个表示清空文件内容
+   //file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND, 0666) // 第二个表示清空文件内容
+   file, err := os.OpenFile(filePath, os.O_RDWR|os.O_APPEND, 0666) // 第二个表示清空文件内容
+   if err != nil {
+       fmt.Printf("open file err=%v\n", err)
+       return
+   }
+   
+   // 及时关闭file句柄
+   defer file.Close()
+   // 先读取原来文件的内容，并显示在终端
+   reader := bufio.NewReader(file)
+   for {
+       str, err := reader.ReadString('\n')
+       if err == io.EOF { // 如果读取到文件的末尾
+           break
+       }
+       // 显示到终端
+       fmt.Print(str)
+   }
+   // 准备写入5句"hello Gardon"
+   str := "TODAY\r\n"
+   // 写入时，使用带缓存的*Writer
+   writer := bufio.NewWriter(file)
+   for i := 0; i < 10; i++ {
+       writer.WriteString(str)
+   }
+   // 因为Writer是带缓存，因此在调用WriterString方法时，其实
+   // 内容是先写入到缓存的，所以需要调用Flush方法，将缓冲的数据
+   // 真正的写入到文件中，否则文件中会没有数据
+   writer.Flush()
+   ```
+
+5. 编写一个程序，将一个文件的内容，写入到另外一个文件。注：这两个文件以及存在了
+
+   说明：
+
+   1. 使用ioutil.ReadFile / outil.WriteFile 完成写文件的任务
+
+   
 
 
 
