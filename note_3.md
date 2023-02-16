@@ -834,31 +834,631 @@ FileMode选项在windows下无效，需要在Linux或Unix下才有效
 
    1. 使用ioutil.ReadFile / outil.WriteFile 完成写文件的任务
 
-   
+      ```go
+      // 将d:/abc.txt 文件内容导入到 d:/test.txt中
+      // 1.首先将 d:/abc.txt内容读取到内存
+      // 2.将读取到的内容写入 d:/test/txt
+      file1Path := "d:/abc.txt"
+      file2Path := "d:/kkk.txt"
+      
+      data, err := ioutil.ReadFile(file1Path)
+      if err != nil {
+          // 说明读取文件有错误
+          fmt.Printf("read file err=%v", err)
+          return
+      }
+      err = ioutil.WriteFile(file2Path, data, 0666)
+      if err != nil {
+          fmt.Printf("write file error=%v\n", err)
+      }
+      ```
 
+###### 判断文件是否存在：
 
+golang判断文件或文件夹是否存在的方法为使用os.Stat()函数返回错误值进行判断：
 
+1. 如果返回的错误为nil,说明文件或文件夹存在
+2. 如果返回的错误类型使用os.IsNotExist()判断为true，说明文件或文件夹不存在
+3. 如果返回值的错误为其它类型，则不确定是否存在
 
+##### 拷贝文件：
 
+将一张图片/电影/mp3/文件拷贝到另一个文件 e:/abc.jpg
 
+func Copy(dst Writer, src Reader)(writen int64, err error)
 
+注意：Copy函数是io包提供的
 
+```go
+package main
 
+import (
+	"bufio"
+	"fmt"
+	"io"
+	"os"
+)
 
+// 自己编写一个函数，接收两个文件路径 srcFileName  dstFileName
+func CopyFile(dstFileName string, srcFileName string) (written int64, err error) {
+	srcFile, err := os.Open(srcFileName)
+	if err != nil {
+		fmt.Printf("open file err=%v\n", err)
+	}
+	defer srcFile.Close()
+	// 通过srcfile，获取到reader
+	reader := bufio.NewReader(srcFile)
 
+	// 打开dstFileName
+	dstFile, err := os.OpenFile(dstFileName, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Printf("open file err=%v\n", err)
+		return
+	}
 
+	// 通过dstFile,获取到Writer
+	writer := bufio.NewWriter(dstFile)
+	defer dstFile.Close()
+	return io.Copy(writer, reader)
+}
 
+func main() {
+	srcFile := "d:/abc.txt"
+	dstFile := "d:/ccc.txt"
+	_, err := CopyFile(dstFile, srcFile)
+	if err == nil {
+		fmt.Println("拷贝完成")
+	} else {
+		fmt.Println("拷贝错误 err=%v", err)
+	}
+}
 
+```
 
+  案例：
 
+统计一个文件中含有的英文、数字、空格和其他字符数量
 
+```go
+// 定义一个结构体，用于保存统计结果
+type CharCount struct {
+	ChCount    int // 记录英文个数
+	NumCount   int // 记录数字的个数
+	SpaceCount int // 记录空格的个数
+	OtherCount int // 记录其他字符的个数
+}
+func main() {
+	// 思路：打开一个文件，创一个Reader
+	// 每读取一行，就去统计该行有多少个 英文、数字、空格和其他字符
+	// 然后将结果保存到一个结构体
+	fileName := "d:/abc.txt"
+	file, err := os.Open(fileName)
+	if err != nil {
+		fmt.Printf("open file err=%v\n", err)
+		return
+	}
+	defer file.Close() // 打开之后就要及时关闭
+	// 定义个charCount实例
+	var count CharCount
+	// 创建一个Reader
+	reader := bufio.NewReader(file)
+	// 开始循环读取fileName的内容
+	for {
+		str, err := reader.ReadString('\n')
+		if err == io.EOF { // 读到文件末尾就退出
+			break
+		}
+		// 遍历str,进行统计
+		for _, v := range str {
+			switch {
+			case v >= 'a' && v <= 'z':
+				fallthrough // 穿透
+			case v >= 'A' && v <= 'Z':
+				count.ChCount++
+			case v == ' ' || v == '\t':
+				count.SpaceCount++
+			case v >= '0' && v < '9':
+				count.NumCount++
+			default:
+				count.OtherCount++
+			}
 
+		}
+	}
+	// 输出统计的结果看看
+	fmt.Printf("字符的个数为=%v 数字的个数为=%v 空格的个数为=%v 其它字符个数=%v",
+		count.ChCount, count.NumCount, count.SpaceCount, count.OtherCount)
+}
+```
 
+##### 命令行参数：
 
+看一个需求
 
+我们希望能够获取到命令行输入的各种参数，该如何处理？
 
+基本介绍：
 
+os.Args是一个string的切片，用来存储所有的命令行参数
 
+```go
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func main() {
+	fmt.Println("命令行的参数有", len(os.Args))
+	// 遍历os.Args切片，就可以得到所有的命令行输入参数值
+	for i, v := range os.Args {
+		fmt.Printf("args[%v]=%v\n", i, v)
+	}
+}
+```
+
+##### flag包解析命令行参数：
+
+说明：前面的方式是比较原生的方式，对解析参数不是特别方便，特别是带有指定参数形式的命令行
+
+比如：cmd>main.exe -f c:/aaa.txt -p 200 -u root这样的形式命令行 ，go设计者给我们提供了flag包，可以方便的解析命令行参数，**而且参数的顺序可以随意**
+
+```go
+package main
+
+import (
+	"flag"
+	"fmt"
+)
+
+func main() {
+	/*
+		fmt.Println("命令行的参数有", len(os.Args))
+		// 遍历os.Args切片，就可以得到所有的命令行输入参数值
+		for i, v := range os.Args {
+			fmt.Printf("args[%v]=%v\n", i, v)
+		}
+	*/
+	// 定义几个变量，用于接收命令行的参数值
+	var user string
+	var pwd string
+	var host string
+	var port int
+	// &user就是接收用户命令行输入的-u后面的参数值
+	// "u" 就是-u指定参数
+	// "" 默认值
+	// "用户名，默认为空" 说明
+	flag.StringVar(&user, "u", "", "用户名，默认为空")
+	flag.StringVar(&pwd, "pwd", "", "密码，默认为空")
+	flag.StringVar(&host, "h", "localhost", "主机名，默认为localhost")
+	flag.IntVar(&port, "port", 3306, "端口号，默认为3306")
+	// 这里有一个非常重要的操作，转换，必须调用该方法
+	flag.Parse()
+	// 输出结果
+	fmt.Printf("user=%v pwd=%v host=%v port=%v", user, pwd, host, port)
+}
+```
+
+##### JSON：
+
+JSON(JavaScript Object Notation)是一种轻量级的数据交换格式，易于人阅读和编写，同事也易于机器解析和生成
+
+2001年开始推广的数据格式，现在是**主流的数据格式**
+
+JSON易于机器解析和生成，并有效提升网络传输效率，通常程序在网络传输时会先将数据（结构体、map等）序列化成json字符串，到接收方得到json字符串时，再反序列化恢复成原来的数据类型（结构体、map等）这种方式已然称为各个语言的标准
+
+在JS中一切都是对象，JSON键值对是用来保存数据的一种方式
+
+###### json序列化：
+
+是指将key-value结构的数据类型（比如**结构体、map、切片**）序列化成json字符串的操作
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+// 定义一个结构体
+type Monster struct {
+    Name     string `json:"name"`   // 反射机制，这里可以更改json序列化之后的名字，因为前端用小写更方便
+	Age      int
+	Birthday string
+	sal      float64
+	skill    string
+}
+
+func testStruct() {
+	// 演示
+	monster := Monster{
+		Name:     "牛魔王",
+		Age:      500,
+		Birthday: "2011-11-11",
+		sal:      8000.0,
+		skill:    "牛魔拳",
+	}
+	// 将monster 序列化
+	data, err := json.Marshal(&monster)
+	if err != nil {
+		fmt.Printf("序列化错误 err=%v\n", err)
+	}
+	// 输出序列化后的结果
+	fmt.Printf("monster序列化后=%v\n", string(data))
+}
+
+// 将map序列化
+func testMap() {
+	// 定义一个map
+	var a map[string]interface{}
+	// 使用map，需要make
+	a = make(map[string]interface{})
+	a["name"] = "孙悟空"
+	a["age"] = 25
+	a["address"] = "水帘洞"
+	// 将a这个map进行序列化
+	// 将monster序列化
+	data, err := json.Marshal(a)
+	if err != nil {
+		fmt.Printf("序列化错误 err=%v\n", err)
+	}
+	// 输出序列化后的结果
+	fmt.Printf("a map序列化后=%v\n", string(data))
+}
+
+// 演示对切片进行序列化，我们这个切片 []map[string]interface{}
+func testSlice() {
+	var slice []map[string]interface{}
+	var m1 map[string]interface{}
+	// 使用map前，需要先make
+	m1 = make(map[string]interface{})
+	m1["name"] = "jack"
+	m1["age"] = "7"
+	m1["address"] = "北京"
+	slice = append(slice, m1)
+
+	var m2 map[string]interface{}
+	// 使用map前，需要先make
+	m2 = make(map[string]interface{})
+	m1["name"] = "tom"
+	m1["age"] = "20"
+	m1["address"] = [2]string{"墨西哥", "阿根廷"}
+	slice = append(slice, m2)
+	// 将切片序列化操作
+	data, err := json.Marshal(slice)
+	if err != nil {
+		fmt.Printf("序列化错误 err=%v", err)
+	}
+	// 输出序列化后的结果
+	fmt.Printf("slice 序列化后=%v\n", string(data))
+}
+
+// 对基本数据类型序列化，没有什么实际意义
+func testFloat64() {
+	var num1 float64 = 2345.67
+	// 对num1进行序列化
+	data, err := json.Marshal(num1)
+	if err != nil {
+		fmt.Printf("序列化错误 err=%v\n", err)
+	}
+	// 输出序列化后的结果
+	fmt.Printf("基本数据类型 序列化后=%v\n", string(data))
+}
+
+func main() {
+	// 演示将结构体，map,切片进行序列化
+	testStruct()
+	testMap()
+	testSlice()
+	testFloat64()
+}
+```
+
+注意事项：
+
+对于结构体序列化，如果我们希望序列化后的key的名字，我们重新制定，那么可以给struct制定一个tag标签，声明type时名字还不能小写，因为这些参数需要跨包使用，所以不能小写，否则报错
+
+###### json反序列化：
+
+就是指将json字符串反序列化成对应的数据类型（比如结构体、map、切片）的操作
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+// 定义一个结构体
+type Monster struct {
+	Name string
+	//Age      int
+	//Birthday string
+	//sal      float64
+	//skill    string
+}
+
+// 演示将json字符串，反序列化成struct
+func unmarshalStruct() {
+	// 说明str 在项目开发中，是通过网络传输获取到
+	str := "{\"name\":\"jack\"}"
+	// 定义一个Monster实例
+	var monster Monster
+	err := json.Unmarshal([]byte(str), &monster)
+	if err != nil {
+		fmt.Printf("unmarshal err=%v\n", err)
+	}
+	fmt.Printf("反序列化后 monster=%v\n", monster)
+}
+
+// 将json字符串反序列化成map
+func unmarshalMap() {
+	str := "{\"name\":\"jack\"}" // 如果是程序读取的，则不用加\号
+	// 定义一个map
+	var a map[string]interface{}
+
+	// 反序列化
+	// 反序列化map，不需要make，因为make操作被封装到Unmarshal函数
+	err := json.Unmarshal([]byte(str), &a)
+	if err != nil {
+		fmt.Printf("unmarshal err=%v\n", err)
+	}
+	fmt.Printf("反序列化后 a=%v\n", a)
+}
+
+// 演示将json字符串，反序列化成切片
+func unmarshalSlice() {
+	str := "[{\"name\":\"jack\"}]"
+	// 定义一个slice
+	var slice []map[string]interface{}
+	err := json.Unmarshal([]byte(str), &slice)
+	if err != nil {
+		fmt.Printf("unmarshal err=%v\n", err)
+	}
+	fmt.Printf("反序列化后 slice=%v\n", slice)
+}
+
+func main() {
+	unmarshalStruct()
+	unmarshalMap()
+	unmarshalSlice()
+}
+```
+
+###### 小结：
+
+1. 在反序列化一个json字符串时，要确保反序列化后的数据类型和原来序列化前的数据类型一致
+2. 如果json字符串是通过程序获取到的，则不需要再对 " 进行转义处理
+
+#### 三、单元测试
+
+Go语言自带一个轻量级的测试框架testing和自带的go test命令来实现单元测试和性能测试，testing框架和其他语言中的测试框架类型，可以基于这个框架写针对相应函数的**测试用例**，也可以基于该框架写相应的压力测试用例，通过单元测试可以解决：
+
+- 确保每个函数是可运行的，并且运行结果是正确的
+- 确保写出来的代码性能是好的
+- 单元测试能及时发现程序设计或实现的逻辑错误，使问题及早暴露，便于问题的定位解决，而性能测试的终点在于发现程序设计上的一些问题，让程序能够在高并发的情况下还能保持稳定
+
+```go
+/*
+go test -v
+testing框架
+1.将xxx_test.go的文件引入
+import...
+
+main(){
+	2.调用TestXxx()函数
+}
+*/
+```
+
+总结：
+
+1. 测试用例文件名必须以 _test.go结尾。比如cal_test.go，cal不是固定的
+2. 测试用例函数必须以Test开头，一般来说就是Test+被测试的函数名，比如TestAddUpper
+3. TestAddUpper(t \*testing T)的形参类型必须是\*testing T   （可以看一下文档）
+4. 一个测试用例文件中，可以有多个测试用例函数，比如TestAddUpper、TestSub
+5. 运行测试用例指令
+   - cmd>go test [如果运行正确，无日志，错误时，会输出日志]
+   - cmd>go test -v [运行正确或是错误，都输出日志]
+6. 当出现错误时，可以使用t.Fatalf来格式化输出错误信息，并退出程序
+7. t.Logf方法可以输出相应的日志
+8. 测试用例函数，并没有放在main函数中，也执行了，这就是**测试用例的方便之处**
+9. PASS表示测试用例运行成，FAIL表示测试用例运行失败
+10. 测试单个文件，一定要带上被测试的原文件go test -v cal_test.go cal.go
+11. 测试单个方法 go test -v -test.run TestAddUpper
+
+##### 案例：
+
+1. 编写一个Monster结构体，字段Name、Age、Skill
+2. 给Monster绑定方法Store，可以将一个Monster变量（对象），序列化后保存到文件中
+3. 给Monster绑定方法ReStore，可以将一个序列化的Monster，从文件中读取，并反序列化为Monster对象，检查反序列化，名字正确
+4. 编程测试用例文件store_test.go，编写测试用例函数TestStore和TestRestore进行测试
+
+```go
+// monster.go
+package monster
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+)
+
+type Monster struct {
+	Name  string
+	Age   int
+	Skill string
+}
+
+// 给Monster绑定方法Store，可以将一个Monster变量（对象），序列化后保存到文件中
+
+func (this *Monster) Store() bool {
+	// 先序列化
+	data, err := json.Marshal(this)
+	if err != nil {
+		fmt.Println("marshal err=", err)
+		return false
+	}
+	// 保存到文件
+	filePath := "d:/monster.ser"
+	err = ioutil.WriteFile(filePath, data, 0666)
+	if err != nil {
+		fmt.Println("write file err=", err)
+		return false
+	}
+	return true
+}
+
+// 给Monster绑定方法ReStore，可以将一个序列化的Monster，从文件中读取
+// 并反序列化为Monster对象，检查反序列化，名字正确
+func (this *Monster) ReStore() bool {
+	// 1.先从文件中，读取序列化的字符串
+	filePath := "d:/monster.ser"
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		fmt.Println("write file err=", err)
+		return false
+	}
+	// 2.使用读取到的data []byte,对反序列化
+	err = json.Unmarshal(data, this)
+	if err != nil {
+		fmt.Println("UnMarshal err=", err)
+		return false
+	}
+	return true
+}
+```
+
+```go
+// monster_test.go
+package monster
+
+import "testing"
+
+// 测试用例，测试Store方法
+func TestStore(t *testing.T) {
+	// 先创建一个Monster实例
+	monster := Monster{
+		Name:  "孙悟空",
+		Age:   500,
+		Skill: "变身",
+	}
+	res := monster.Store()
+	if !res {
+		t.Fatalf("monster.Store() 错误，希望为%v 实际为=%v", true, res)
+	}
+	t.Logf("monster.Store() 测试成功！")
+}
+
+```
+
+#### 四、goroutine(协程)和channel(管道)
+
+需求：统计1-90000000的数字中，哪些是素数？
+
+分析思路：
+
+1. 传统的方法，就是使用一个循环，循环的判断各个数是不是素数
+2. 使用并发或者并行的方法，将统计素数的任务分配给多个goroutine去完成，这时就会使用到goroutine
+
+##### 进程和线程的说明：
+
+1. 进程就是程序在操作系统中的一次执行过程，是系统进行资源分配和调度的基本单位
+2. 线程是进程的一个执行实例，是程序执行的最小单元，它是比进程更小的能独立运行的基本单位
+3. 一个进程可以创建核销毁多个线程，同一个进程中的多个线程可以并发执行
+4. 一个程序至少有一个进程，一个进程至少有一个线程
+
+##### 并发和并行：
+
+- 多线程程序在单核上运行，就是并发
+- 多线程程序在多核上运行，就是并行
+
+##### Go协程和Go主线程：
+
+1. Go主线程（有程序员直接称为线程/也可以理解成进程），一个Go线程上，可以起多个协程，你可以这样理解，**协程是轻量级的线程**
+2. Go协程的特点
+   - 有独立的栈空间
+   - 共享程序堆空间
+   - 调度由用户控制
+   - 协程是轻量级的线程
+
+案例：
+
+编写一个程序，完成如下功能：
+
+1. 在主线程（可以理解成进程）中，开启一个goroutine，该协程每隔1s输入"hello world"
+2. 在主线程中也每隔一秒输出"hello,golang"，输出10次后，退出程序
+3. 要求主线程和goroutine同时执行
+4. 画出主线程和协程执行流程图
+
+```go
+// 在主线程（可以理解成进程）中，开启一个goroutine，该协程每隔1秒输出"hello world"
+// 在主线程中也每隔一秒输出"hello,golang",输出10次后退出程序
+// 要求主线程和goroutine同时执行
+
+func test() {
+	for i := 1; i <= 10; i++ {
+		fmt.Println("hello world" + strconv.Itoa(i)) // strconv.Itoa() 将数字转成字符串
+		time.Sleep(time.Second)
+	}
+}
+
+func main() {
+	go test() // 开启一个协程
+	for i := 1; i <= 10; i++ {
+		fmt.Println("main() hello,golang" + strconv.Itoa(i))
+		time.Sleep(time.Second)
+	}
+}
+```
+
+小结：
+
+1. 主线程是一个物理线程，直接作用在cpu上的，是重量级的，非常耗费cpu资源
+2. 协程从主线程开启的，是轻量级的线程，是逻辑态。对资源消耗想对小
+3. Go的协程机制是最重要的特点，可以轻松开启上万协程。其他语言的并发机制一般基于线程，开启过多的线程，资源消耗大，这里就凸显Go在并发上的优势
+
+##### MPG模式：
+
+- M：操作系统的主线程（是物理线程）
+- P：协程执行需要的上下文
+- G：协程
+
+MPG模式运行的状态：
+
+1. M0主线程正在执行Go协程，另外有三个协程在队列等待
+2. 如果Go协程阻塞，比如读取文件或者数据库等
+3. 这时就会创建M1主线程（也可能是从已有的线程池中取出M1），并且将等待的3个协程挂到M1下开始执行，M0的主线程下的Go仍然执行文件io的读写
+4. 这样MPG调度模式，可以既让G0执行，同时也不会让队列的其它协程一直阻塞，仍然可以并发/并行执行
+5. 等到G0不阻塞了，M0会被放到空闲的主线程继续执行（从已有的线程池中取），同时G0又会被唤醒
+
+##### 设置Go运行CPU数：
+
+在Go1.8后，默认让程序运行在多个核上，可以不用设置了，Go1.8前，还是要设置一下，可以更高效的利用CPU
+
+```go
+// 获取当前系统CPU的数量
+num := runtime.NumCPU()
+// 这里设置num-1的cpu运行go程序
+runtime.GOMAXPROCS(num)
+fmt.Println("num=",num)
+```
+
+需求：现在要计算1-200的各个数的阶乘，并且把各个数的阶乘放入到map中。最后显示出来，要求使用goroutine完成
+
+分析思路：
+
+1. 使用goroutine来完成，效率高，但是会出现并发/并行安全问题
+2. 这里就提出了不同goroutine如何通信的问题
+
+代码实现：
+
+1. 使用goroutine来完成（看看使用goroutine并发完成会出现什么问题？然后会去解决）
+2. 在运行某个程序时，如何知道是否存在资源竞争问题，方法简单，在编译该程序时，增加一个参数-race即可
+3. 
 
 
 
