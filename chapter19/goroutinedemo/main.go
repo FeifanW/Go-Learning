@@ -2,25 +2,48 @@ package main
 
 import (
 	"fmt"
-	"strconv"
+	"sync"
 	"time"
 )
 
-// 在主线程（可以理解成进程）中，开启一个goroutine，该协程每隔1秒输出"hello world"
-// 在主线程中也每隔一秒输出"hello,golang",输出10次后退出程序
-// 要求主线程和goroutine同时执行
+// 思路
+// 1.编写一个函数，来计算各个数的阶乘，并放入到map中
+// 2.我们启动的协程多个，统计的将结果放入到map中
+// 3.map应该做出一个全局的
 
-func test() {
-	for i := 1; i <= 10; i++ {
-		fmt.Println("hello world" + strconv.Itoa(i)) // strconv.Itoa() 将数字转成字符串
-		time.Sleep(time.Second)
+var (
+	myMap = make(map[int]int, 10)
+	// 声明一个全局的互斥锁
+	// lock 是一个全局的互斥锁
+	// sync 是包： synchornized 同步
+	// Mutex: 是互斥
+	lock sync.Mutex
+)
+
+func test(n int) {
+	res := 1
+	for i := 1; i <= n; i++ {
+		res *= i
 	}
+	// 这里我们将res放入到myMap
+	// 加锁
+	lock.Lock()
+	myMap[n] = res
+	// 解锁
+	lock.Unlock()
 }
 
 func main() {
-	go test() // 开启一个协程
-	for i := 1; i <= 10; i++ {
-		fmt.Println("main() hello,golang" + strconv.Itoa(i))
-		time.Sleep(time.Second)
+	// 我们这里开启多个协程完成这个任务[20个]
+	for i := 1; i <= 20; i++ {
+		go test(i)
 	}
+	// 休眠10秒钟[第二个问题]
+	time.Sleep(time.Second * 5)
+	// 这里我们输出结果，变量这个结果
+	lock.Lock()
+	for i, v := range myMap {
+		fmt.Printf("map[%d]=%d\n", i, v)
+	}
+	lock.Unlock()
 }

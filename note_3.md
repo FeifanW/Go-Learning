@@ -1458,15 +1458,124 @@ fmt.Println("num=",num)
 
 1. 使用goroutine来完成（看看使用goroutine并发完成会出现什么问题？然后会去解决）
 2. 在运行某个程序时，如何知道是否存在资源竞争问题，方法简单，在编译该程序时，增加一个参数-race即可
-3. 
 
+##### 不同的goroutine之间如何通信：
 
+1. 全局变量加锁同步
+2. channel
 
+使用全局变量加锁同步改进程序
 
+- 因为没有对全局变量m加锁，因此会出现资源争夺问题，代码会出现错误，提示concurrent map writes
+- 解决方案：加入互斥锁
+- 我们的数的阶乘很大，结果会越界，可以将求阶乘改成sum += unit64(i)
 
+```go
+package main
 
+import (
+	"fmt"
+	"sync"
+	"time"
+)
 
+// 思路
+// 1.编写一个函数，来计算各个数的阶乘，并放入到map中
+// 2.我们启动的协程多个，统计的将结果放入到map中
+// 3.map应该做出一个全局的
 
+var (
+	myMap = make(map[int]int, 10)
+	// 声明一个全局的互斥锁
+	// lock 是一个全局的互斥锁
+	// sync 是包： synchornized 同步
+	// Mutex: 是互斥
+	lock sync.Mutex
+)
+
+func test(n int) {
+	res := 1
+	for i := 1; i <= n; i++ {
+		res *= i
+	}
+	// 这里我们将res放入到myMap
+	// 加锁
+	lock.Lock()
+	myMap[n] = res
+	// 解锁
+	lock.Unlock()
+}
+
+func main() {
+	// 我们这里开启多个协程完成这个任务[20个]
+	for i := 1; i <= 20; i++ {
+		go test(i)
+	}
+	// 休眠10秒钟[第二个问题]
+	time.Sleep(time.Second * 5)
+	// 这里我们输出结果，变量这个结果
+	lock.Lock()
+	for i, v := range myMap {
+		fmt.Printf("map[%d]=%d\n", i, v)
+	}
+	lock.Unlock()
+}
+```
+
+##### channel(管道)基本介绍：
+
+为什么需要channel:
+
+前面使用全局变量加锁同步来解决goroutine的通讯，但是不完美
+
+- 主线程在等待所有的goroutine全部完成的时间很难确定，我们这里设置10秒，仅仅是估算
+- 如果主线程休眠时间长了，会加长等待时间，如果等待时间短了，可能还有goroutine处于工作状态，这是也会随主线程的退出而销毁
+- 通过全局变量加锁同步来实现通讯，也并不利用多个协程对全局变量的读写操作
+- 上面种种分析都在呼唤一个新的通讯机制channel
+
+###### channel介绍：
+
+- channel本质就是一个数据结构-队列
+- 数据是先进先出的[FIFO]
+- 线程安全，多goroutine访问时，不需要加锁，就是说channel本身就是线程安全的，多个协程操作同一个管道时不会发生资源竞争
+- channel时有类型的，一个string的channel只能存放string类型数据
+
+###### 定义/声明channel：
+
+var 变量名 chan 数据类型
+
+```go
+var inChan chan int // inChan用于存放int数据
+var mapChan chan map[int]string // mapChan用于存放map[int]string类型
+var perChan chan Person
+var perChan2 chan *Person
+```
+
+说明：
+
+- channel是引用类型
+- channel必须初始化才能写入数据，即make后才能使用
+- 管道是有类型的，intChan只能写入整数int
+
+注意事项：
+
+1. channel中只能存放指定的数据类型
+2. channel数据放满之后就不能再放入了
+3. 如果从channel取出数据后，可以继续放入
+4. 在没有使用协程的情况下，如果channel数据取完了，再取，就会报dead lock
+
+###### channel的遍历和关闭：
+
+channe的关闭：
+
+使用内置函数close可以关闭channel，当channel关闭后，就不能再向channel写数据了，但是仍然可以从该channel读取数据
+
+channel的遍历：
+
+channel支持for-range的方式进行遍历，注意两个细节
+
+- 在遍历时，如果channel没有关闭，则会出现deadlock的错误
+- 在遍历时，如果channel已经关闭，则会正常遍历数据，遍历完后，就会退出遍历
 
 
 
