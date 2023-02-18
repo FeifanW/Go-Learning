@@ -1577,23 +1577,462 @@ channel支持for-range的方式进行遍历，注意两个细节
 - 在遍历时，如果channel没有关闭，则会出现deadlock的错误
 - 在遍历时，如果channel已经关闭，则会正常遍历数据，遍历完后，就会退出遍历
 
+```go
+intChan := make(chan int, 3)
+intChan <- 100
+intChan <- 200
+close(intChan) // 关闭管道
+// 不能够再写入了 intChan <- 300
+fmt.Println("okok")
+// 当管道关闭后，读取数据是可以的
+n1 := <-intChan
+fmt.Println("n1=", n1)
 
+// 遍历管道
+intChan2 := make(chan int, 100)
+for i := 0; i < 100; i++ {
+    intChan2 <- i * 2 // 放入100个数据到管道
+}
 
+// 在遍历时，如果channel没有关闭，则会出现deadlock的错误
+close(intChan2)
+// 遍历管道不能使用for循环
+for v := range intChan2 {
+    fmt.Println("v=", v)
+}
+```
 
+案例：
 
+请完成goroutine和channel协同工作的案例，具体要求：
 
+1. 开启一个writeData协程，向管道intChan中写入50个整数
+2. 开启一个readData协程，向管道intChan中读取writeData写入数据
+3. 注意：writeData和readData操作的是同一个管道
+4. 主线程需要等待writeData和readData协程都完成工作才退出
 
+```go
+package main
 
+import (
+	"fmt"
+)
 
+//write data
+func writeData(intChan chan int) {
+	for i := 1; i <= 50; i++ {
+		// 放入数据
+		intChan <- i
+		fmt.Println("writeData", i)
+		//time.Sleep(time.Second)
+	}
+	close(intChan)
+}
 
+// read data
+func readData(intChan chan int, exitChan chan bool) {
+	for {
+		v, ok := <-intChan
+		if !ok {
+			break
+		}
+		//time.Sleep(time.Second)
+		fmt.Printf("readData 读到数据=%v\n", v)
+	}
+	// readData 读取完数据后，即任务完成
+	exitChan <- true
+	close(exitChan) // 关闭
+}
 
+func main() {
+	// 创建两个管道
+	intChan := make(chan int, 50)
+	exitChan := make(chan bool, 1)
+	go writeData(intChan)
+	go readData(intChan, exitChan)
+	// readData 读取完数据后，即任务完成
+	for {
+		_, ok := <-exitChan
+		if !ok {
+			break
+		}
+	}
+}
+```
 
+###### 管道的阻塞机制：
 
+如果只是向管道写入数据，没有读取，就会出现阻塞而dead lock。写管道和读管道的频率不一致，无所谓
 
+###### goroutine和channel结合：
 
+![image-20230217095353103](D:\practice Space\Go-Learning\assets\image-20230217095353103.png)
 
+```go
+package main
 
+import "fmt"
 
+func putNum(intChan chan int) {
+	for i := 1; i <= 8000; i++ {
+		intChan <- i
+	}
+	// 关闭intChan
+	close(intChan)
+}
+
+// 从intChan取出数据，并判断是否为素数，如果是就放入到primeChan
+func primeNum(intChan chan int, primeChan chan int, exitChan chan bool) {
+	// 使用for循环
+	var flag bool
+	for {
+		num, ok := <-intChan
+		if !ok { // intChan取不到
+			break
+		}
+		flag = true // 假设是素数
+		// 判断num是不是素数
+		for i := 2; i < num; i++ {
+			if num%i == 0 { // 说明该num不是素数
+				flag = false
+				break
+			}
+		}
+		if flag {
+			// 将这个数放入到primeChan
+			primeChan <- num
+		}
+	}
+	fmt.Println("有一个primeNum 协程因为取不到数据，退出")
+	// 这里还不能关闭primeChan
+	// 向exitChan写入true
+	exitChan <- true
+}
+
+func main() {
+	intChan := make(chan int, 1000)
+	primeChan := make(chan int, 2000) // 放入结果
+	// 标识退出的管道
+	exitChan := make(chan bool, 4) // 4个
+	// 开启一个协程，向intChan放入 1-8000 个数
+	go putNum(intChan)
+	// 开启4个协程，从intChan取出数据，并判断是否为素数，如果是就放入到primeChan
+	for i := 0; i < 4; i++ {
+		go primeNum(intChan, primeChan, exitChan)
+	}
+	// 这里主线程，进行处理
+	go func() {
+		for i := 0; i < 4; i++ {
+			<-exitChan
+		}
+		// 当我们从exitChan 取出4个结果，就可以放心的关闭primeNum
+		close(primeChan)
+	}()
+	// 比那里我们的primeNum，把结果取出
+	for {
+		res, ok := <-primeChan
+		if !ok {
+			break
+		}
+		// 将结果输出
+		fmt.Printf("素数=%d\n", res)
+	}
+	fmt.Println("main线程退出")
+}
+```
+
+channel使用细节和注意事项
+
+- channel可以声明为只读，或者只写性质
+- channel只读和只写的最佳实践案例
+
+```go
+// 管道可以声明为只读或只写
+// 1.在默认情况下，管道是双向
+// var cha1 chan int  可读可写
+// 2.声明为只写
+var chan2 chan<- int
+chan2 = make(chan int,3)
+chan2 <- 20
+// num := <-chan2 error
+fmt.Println("chan2=",chan2)
+
+// 3.声明为只读
+var chan3 <- chan int
+num2 := <-chan3
+// chan3<- 30 err
+fmt.Println("num2",num2)
+```
+
+- 使用select可以解决从管道取数据的阻塞问题
+
+  ```go
+  // 传统的方法在遍历管道时，如果不关闭会阻塞而导致deadlock
+  // 问题：在实际开发中，可能我们不好确定什么时候关闭该管道
+  // 可以使用select方式
+  // label:
+  for {
+      select {
+          // 注意：这里如果intChan一直没有关闭，不会一直阻塞而deadlock
+          // 会自动到下一个case匹配
+          case v := <- intChan:
+              fmt.Printf("从intChan读取的数据%d\n",v)
+              time.Sleep(time.Second)
+          case v := <- stringChan:
+              fmt.Printf("从stringChan读取的数据%s\n",v)
+              time.Sleep(time.Second) 
+          default:
+              fmt.Printf("都取不到",v)
+              time.Sleep(time.Second)
+          	return
+      }
+  }
+  ```
+
+- goroutine中使用recover，解决协程中出现panic，导致程序崩溃问题
+
+  说明：
+
+  如果我们起了一个协程，但是这个协程出现了panic，如果我们没有捕获这个panic，就会造成整个程序崩溃，这时我们可以在goroutine中使用recover来捕获panic，进行处理，这样即使协程发生的问题，但是主线程仍然不受影响，可以继续执行
+
+  ```go
+  func sayHello() {
+  	for i := 0; i < 10; i++ {
+  		time.Sleep(time.Second)
+  		fmt.Println("hello,world")
+  	}
+  }
+  
+  func test() {
+  	// 这里可以使用defer + recover
+  	defer func() {
+  		// 捕获test抛出的panic
+  		if err := recover(); err != nil {
+  			fmt.Println("test() 发生错误", err)
+  		}
+  	}()
+  	// 定义了一个map
+  	var myMap map[int]string
+  	myMap[0] = "golang" //error
+  }
+  func main() {
+      go sayHello()
+      go test()
+  }
+  ```
+
+#### 五、反射
+
+1. 反射可以在运动时动态获取变量的各种信息，比如变量的类型，类别
+2. 如果是结构体变量，还可以获取到结构体本身的信息（包括结构体的字段、方法）
+3. 通过反射，可以修改变量的值，可以调用关联的方法
+4. 使用反射，需要import("reflect")
+
+##### 反射的应用场景：
+
+常见的应用场景有以下两种
+
+1. 不知道接口调用的哪个函数，根据传入参数在运行时，确定调用的具体接口，这种需要对函数或方法反射。例如如下的桥接模式
+
+   ```go
+   func bridge(funcPtr interface{},args...interface{})
+   ```
+
+   第一个参数funcPtr以接口的形式传入函数指针，函数参数args以可变参数的形式传入，bridge函数中可以用反射来动态执行funcPtr函数
+
+2. 对结构体序列化时，如果结构体有指定tag，也会使用到反射生成对应的字符串
+
+##### 反射的重要函数和概念：
+
+1. reflect.TypeOf(变量名)，获取变量的类型，返回reflect.Type类型
+
+2. reflect.ValueOf(变量名)，获取变量的值，返回reflect.Value类型reflect.Value是一个结构体类型
+
+3. 变量、interface{}和reflect.Value是可以相互转换的，这点在实际开发中，会经常使用到
+
+   ```go
+   var student Stu
+   var num int
+   /*
+   专门用于做反射
+   func test(b interface{}){
+   	// 1.如何将interface{}转成reflect.Value
+   	rVal:=reflect.ValueOf(b)
+   	// 2.如何将reflect.Value -> interface{}
+   	iVal := rVal.Interface()
+   	// 3.如何将interface{}转成原来的变量类型，使用类型断言v:=iVal.(Stu)
+   }
+   */
+   ```
+
+##### 案例：
+
+- 请编写一个案例，演示对（基本数据类型、interface{}、reflect.Value）进行反射的基本操作
+
+  ```go
+  // 专门演示反射
+  func reflectTest01(b interface{}) {
+  	// 通过反射获取的传入的变量的 type kind 值
+  	// 1.先获取到reflect.Type
+  	rTyp := reflect.TypeOf(b)
+  	fmt.Println("rType=", rTyp)
+  	// 2.获取到reflect.Value
+  	rVal := reflect.ValueOf(b)
+  	n2 := 2 + rVal.Int()
+  	fmt.Println("n2=", n2)
+  	fmt.Printf("rVal=%v rVal type=%T\n", rVal, rVal)
+  	// 3.下面将rVal转成interface{}
+  	iV := rVal.Interface()
+  	// 将interface{} 通过断言转成需要的类型
+  	num2 := iV.(int)
+  	fmt.Println("num2=", num2)
+  }
+  
+  func main() {
+  	// 编写一个案例
+  	// 演示对（基本数据类型、interface{}、felect.Value）进行反射的基本操作
+  	// 1.先定义一个int
+  	var num int = 100
+  	reflectTest01(num)
+  }
+  ```
+
+- 请编写一个案例，演示对（结构体类型、interface{}、reflect.Value）进行反射的基本操作
+
+  ```go
+  // 专门演示反射[对结构体的反射]
+  func reflectTest02(b interface{}) {
+  	// 通过反射获取的传入的变量的 type kind 值
+  	// 1.先获取到reflect.Type
+  	rTyp := reflect.TypeOf(b)
+  	fmt.Println("rType=", rTyp)
+  	// 2.获取到reflect.Value
+  	rVal := reflect.ValueOf(b)
+  
+  	// 3.下面将rVal转成interface{}
+  	iV := rVal.Interface()
+  	fmt.Printf("iV = %v iV = %T\n", iV, iV) // 运行时的反射
+  	// 将interface{}通过断言转成需要的类型
+  	// 这里就简单使用了一带检测的类型断言
+  	// 同学们可以使用switch 的断言形式来做的更加的灵活
+  	stu, ok := iV.(Student)
+  	if ok {
+  		fmt.Printf("stu.Name=%v\n", stu.Name)
+  	}
+  }
+  
+  type Student struct {
+  	Name string
+  	Age  int
+  }
+  
+  func main() {
+  	// 2.定义一个Student的实例
+  	stu := Student{
+  		Name: "tom",
+  		Age:  20,
+  	}
+  
+  	reflectTest02(stu)
+  }
+  
+  ```
+
+##### 反射的注意事项和细节说明：
+
+1. reflect.Value.Kind  获取变量的类别，返回的是一个常量
+
+2. Type是类型，Kind是类型，Type和Kind**可能是相同的，也可能是不同的**
+
+   比如：var num int = 10 num的Type是int，Kind也是int
+
+   比如：var Stu Student stu的Type是 **包名.Student**，Kind是**struct**
+
+3. 通过反射可以让变量在interface{}和reflect.Value之间相互转换
+
+   变量<------->interface{}<--------->reflect.Value
+
+4. 使用反射的方式来获取变量的值（并返回对应的类型），要求数据类型匹配，比如x是int，那么就应该使用reflect.Value(x).Int()而不能使用其它的，否则报panic
+
+5. 通过反射来修改变量，注意当使用setXXX方法来设置需要通过对应的指针类型来完成，这样才能改变传入的变量的值，同时需要使用reflect.Value.Elem()方法
+
+6. reflect.Value.Elem()如何理解
+
+   ```go
+   // fn.Elem() 用于获取指针指向变量，类似
+   var num = 10
+   var b *int = &num
+   *b = 3
+   ```
+
+##### 常量补充知识：
+
+- 常量使用const修改
+- 常量在定义的时候必须初始化赋值
+- 常量不能修改
+- 常量只能修饰bool、数值类型（int,float系列）、string类型
+- 语法：const identifier [type] = value
+
+举例说明下面写法是否正确：
+
+```go
+const name = "tom" //ok
+const tax float64=0.8 //ok
+const a int // error
+const b = 9/3  // ok
+const c = getVal()  // err
+```
+
+比较简洁的写法：
+
+```go
+func main() {
+    const (
+        a = 1
+        b = 2
+    )
+    fmt.Println(a,b)
+}
+```
+
+还有一种专业的写法
+
+```go
+/*表示给a赋值为0
+b在a的基础上+1
+c在b的基础上+1
+这种写法就比较专业了*/
+func main() {
+    const (
+    	a = iota   // 一行递增一次
+        b
+        c
+    )
+    fmt.Println(a,b,c)
+}
+```
+
+###### 常量使用注意事项：
+
+- Go中没有常量名必须字母大写的规范，比如TAX_RATE
+- 仍然通过首字母的大小写来控制常量的访问范围
+
+##### 反射练习：
+
+```go
+var str string = "tom"  // ok
+fs := reflect.ValueOf(&str)  // ok -> string 需要取地址
+fs.Elem().SetString("jack")  //ok
+fmt.Printf("%v\n",str)  //jack
+```
+
+##### 反射的最佳实践：
+
+1. 使用反射来遍历结构体的字段，调用结构体的方法，并获取结构体标签的值
+
+   Method方法和Call方法
+
+2. 
 
 
 
