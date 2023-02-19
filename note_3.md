@@ -2032,7 +2032,155 @@ fmt.Printf("%v\n",str)  //jack
 
    Method方法和Call方法
 
-2. 
+   ```go
+   package main
+   
+   import (
+   	"fmt"
+   	"reflect"
+   )
+   
+   // 定义了一个Monster结构体
+   type Monster struct {
+   	Name  string `json:"name"`
+   	Age   int    `json:"monster_age"`
+   	Score float32
+   	Sex   string
+   }
+   
+   // 方法，显示s的值
+   func (s Monster) Print() {
+   	fmt.Println("---start---")
+   	fmt.Println(s)
+   	fmt.Println("---end---")
+   }
+   
+   // 方法，返回两个数的和
+   func (s Monster) GetSum(n1, n2 int) int {
+   	return n1 + n2
+   }
+   
+   // 方法，接收四个值，给Monster赋值
+   func (s Monster) Set(name string, age int, score float32, sex string) {
+   	s.Name = name
+   	s.Age = age
+   	s.Score = score
+   	s.Sex = sex
+   }
+   func TestStruct(a interface{}) {
+   	// 获取reflect.Type类型
+   	typ := reflect.TypeOf(a)
+   	// 获取reflect.Value类型
+   	val := reflect.ValueOf(a)
+   	// 获取到a对应的类别
+   	kd := val.Kind()
+   	// 如果传入的不是struct,就退出
+   	if kd != reflect.Struct {
+   		fmt.Println("expect struct")
+   		return
+   	}
+   	// 获取结构体有几个字段
+   	num := val.NumField()
+   	fmt.Printf("struct has %d fields\n", num)
+   	for i := 0; i < num; i++ {
+   		fmt.Printf("Field %d:值为=%v\n", i, val.Field(i))
+   		// 获取到struct标签，注意需要通过reflect.Type来获取tag标签的值
+   		tagVal := typ.Field(i).Tag.Get("json") // 反序列化
+   		// 如果该字段于tag标签就显示，否则就不显示
+   		if tagVal != "" {
+   			fmt.Printf("Field %d: tag为=%v\n", i, tagVal)
+   		}
+   	}
+   	// 获取到该结构体有多少方法
+   	numOfMethod := val.NumMethod()
+   	fmt.Printf("struct has %d methods\n", numOfMethod)
+   
+   	// var params []reflect.Value
+   	val.Method(1).Call(nil) // 调用的时候是按照函数的ASCII码排的
+   
+   	// 调用结构体的第1个方法Method(0)
+   	var params []reflect.Value
+   	params = append(params, reflect.ValueOf(10))
+   	params = append(params, reflect.ValueOf(40))
+   	res := val.Method(0).Call(params) // 传入的参数是[]reflect.Value
+   	fmt.Println("res=", res[0].Int()) // 返回的结果是[]reflect.Value
+   }
+   
+   // 定义了一个Monster结构体
+   func main() {
+   	// 创建了一个Monster实例
+   	var a = Monster{
+   		Name:  "黄鼠狼",
+   		Age:   400,
+   		Score: 30.8,
+   	}
+   	// 将Monster实例传递给了TestStruct实例
+   	TestStruct(a)
+   }
+   ```
+
+2. 使用反射的方法来获取结构体的tag标签，遍历字段的值，**修改字段值**，调用结构体方法（**要求：通过传递地址的方式完成，在前面案例上修改即可**）
+
+3. 定义了两个函数test1和test2，定义了一个适配器函数用作统一处理接口[**了解**]
+
+4. 使用反射操作任意结构体类型[**了解**]
+
+5. 使用反射创建并操作结构体
+
+
+#### 六、网络编程
+
+Go的设计目标之一就是面向大规模后端服务程序
+
+网络编程有两种：
+
+- TCP socket编程，是网络编程的主流，之所以叫TCP socket编程，是因为底层是基于TCP/ip协议，比如QQ
+- b/s结构的http编程，我们使用的浏览器去访问服务器时，使用的就是http协议，而http底层依旧是用tcp socket实现的，比如京东
+
+OSI与TCP/ip参考模型：
+
+OSI模型（理论）：物理层-数据链路层-网络层-传输层-会话层-表示层-应用层
+
+TCP/IP模型（现实）：链路层-网络层-传输层-应用层
+
+端口：不是物理意义的端口，而是指TCP/IP协议中的端口，是逻辑意义上的端口，一个IP地址的端口可以有65536（256*256）端口号只有整数，范围是从0到65535（256\*256-1）
+
+##### 端口分类：
+
+- 0号是保留端口
+
+- 1-1024是固定端口，又叫名端口，即被某些程序固定使用，一般程序员不使用
+
+  22：SSH远程登录协议 23：telnet使用 21：ftp使用 25：smtp服务使用  80：iis使用 7：echo服务
+
+- 1025-65536是动态端口
+
+  这些端口，程序员可以使用
+
+##### 端口使用注意：
+
+- 在计算机（尤其是做服务器）要尽量少开端口
+- 一个端口只能被一个程序监听
+- 如果使用netstat -an可以查看本机有哪些端口在监听
+- 可以使用 netstat -anb来查看监听端口的pid，在结合任务管理器关闭不安全的端口
+
+##### 服务端的处理流程：
+
+- 监听端口
+- 接收客户端的tcp连接，简历客户端和服务端的连接
+- 创建goroutine，处理该链接的请求（通常客户端会通过链接发送请求包）
+
+##### 客户端的处理流程：
+
+- 建立与服务端的链接
+- 发送请求数据，接收服务器端返回的结果数据
+- 关闭链接
+
+
+
+
+
+
 
 
 
